@@ -482,3 +482,231 @@ class DashboardSummaryOut(BaseModel):
     category_distribution: Dict[str, int]
     os_distribution: Dict[str, int]
     daily_trend: List[Dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# SERVICE REQUEST SCHEMAS
+# ---------------------------------------------------------------------------
+class ServiceRequestTypeBase(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    description: str
+    category: str = "General IT"
+    default_priority: str = "Medium"
+    approval_required: bool = False
+    default_sla_hours: int = 24
+    is_active: bool = True
+
+
+class ServiceRequestTypeCreate(ServiceRequestTypeBase):
+    pass
+
+
+class ServiceRequestTypeUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    default_priority: Optional[str] = None
+    approval_required: Optional[bool] = None
+    default_sla_hours: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ServiceRequestTypeOut(ServiceRequestTypeBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceRequestCommentCreate(BaseModel):
+    comment: str = Field(..., min_length=1)
+    is_internal: bool = False
+
+
+class ServiceRequestCommentOut(BaseModel):
+    id: str
+    request_id: str
+    user_id: str
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    comment: str
+    is_internal: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceRequestTimelineOut(BaseModel):
+    id: str
+    request_id: str
+    event_type: str
+    title: str
+    description: Optional[str] = None
+    actor_id: str
+    actor_name: Optional[str] = None
+    actor_role: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceRequestCreate(BaseModel):
+    request_type_id: str
+    title: str = Field(..., min_length=3, max_length=255)
+    description: str = Field(..., min_length=5)
+    priority: Optional[str] = None  # Will default to request_type default_priority if None
+    business_justification: str = Field(..., min_length=5)
+    required_date: Optional[date] = None
+    asset_id: Optional[str] = None
+    application_name: Optional[str] = None
+    access_level: Optional[str] = None
+    software_name: Optional[str] = None
+    software_version: Optional[str] = None
+    device_type: Optional[str] = None
+
+
+class ServiceRequestUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    business_justification: Optional[str] = None
+    required_date: Optional[date] = None
+    application_name: Optional[str] = None
+    access_level: Optional[str] = None
+    software_name: Optional[str] = None
+    software_version: Optional[str] = None
+    device_type: Optional[str] = None
+
+
+class ServiceRequestApproveAction(BaseModel):
+    approved: bool
+    reason: Optional[str] = None
+
+
+class ServiceRequestRejectAction(BaseModel):
+    reason: str = Field(..., min_length=3, description="Rejection reason is mandatory")
+
+
+class ServiceRequestAssignAction(BaseModel):
+    assigned_to: Optional[str] = None
+    assigned_team: Optional[str] = None
+
+
+class ServiceRequestStatusAction(BaseModel):
+    status: str
+    reason: Optional[str] = None
+
+
+class ServiceRequestFulfillAction(BaseModel):
+    fulfillment_details: Dict[str, Any] = Field(..., description="Type-specific verified completion info")
+    resolution_notes: Optional[str] = None
+
+
+class ServiceRequestConfirmAction(BaseModel):
+    confirmed: bool = True
+    feedback_notes: Optional[str] = None
+
+
+class ServiceRequestReportProblemAction(BaseModel):
+    problem_description: str = Field(..., min_length=5)
+
+
+class ServiceRequestCancelAction(BaseModel):
+    reason: Optional[str] = None
+
+
+class ServiceRequestOut(BaseModel):
+    id: str
+    request_number: str
+    title: str
+    description: str
+    category: str
+    priority: str
+    status: str
+    request_type_id: str
+    request_type_name: Optional[str] = None
+    requester_id: str
+    requester_name: Optional[str] = None
+    requester_email: Optional[str] = None
+    requester_department: Optional[str] = None
+    approval_required: bool
+    approval_status: str
+    approver_id: Optional[str] = None
+    approver_name: Optional[str] = None
+    approval_reason: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    assigned_team: Optional[str] = None
+    business_justification: str
+    required_date: Optional[date] = None
+    asset_id: Optional[str] = None
+    asset_tag: Optional[str] = None
+    asset_model: Optional[str] = None
+    application_name: Optional[str] = None
+    access_level: Optional[str] = None
+    software_name: Optional[str] = None
+    software_version: Optional[str] = None
+    device_type: Optional[str] = None
+    fulfillment_details: Optional[str] = None
+    resolution_notes: Optional[str] = None
+    due_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    fulfilled_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+    sla_status: Optional[str] = "Within SLA"
+    is_breached: Optional[bool] = False
+    comments: Optional[List[ServiceRequestCommentOut]] = []
+    timeline: Optional[List[ServiceRequestTimelineOut]] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceRequestListResponse(BaseModel):
+    items: List[ServiceRequestOut]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class UnifiedWorkItemOut(BaseModel):
+    id: str
+    item_type: str  # "Incident" | "Service Request"
+    reference_number: str  # "INC-2026-XXXXXX" | "SR-2026-XXXXXX"
+    title: str
+    category: str
+    requester_id: str
+    requester_name: str
+    requester_department: str
+    priority: str
+    status: str
+    assigned_to_id: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    assigned_team: Optional[str] = None
+    sla_status: str
+    is_breached: bool
+    due_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class ServiceRequestDashboardOut(BaseModel):
+    total_requests: int
+    pending_approval: int
+    unassigned: int
+    in_progress: int
+    fulfilled: int
+    closed: int
+    sla_breached: int
+    sla_at_risk: int
+    sla_compliance_rate: float
+    average_fulfillment_hours: float
+    by_type: Dict[str, int]
+    by_category: Dict[str, int]
+    by_status: Dict[str, int]
+    by_team: Dict[str, int]
+    daily_trend: List[Dict[str, Any]]
+

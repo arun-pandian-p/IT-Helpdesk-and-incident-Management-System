@@ -62,4 +62,5 @@ def require_role(allowed_roles: List[str]):
 
 # Convenient shorthands
 require_support = require_role([UserRole.SUPPORT, UserRole.ADMIN])
+require_support_or_admin = require_support
 require_admin = require_role([UserRole.ADMIN])

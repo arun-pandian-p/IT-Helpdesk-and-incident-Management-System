@@ -76,6 +76,50 @@ class ImprovementStatus:
     DEFERRED = "Deferred"
 
 
+class ServiceRequestStatus:
+    SUBMITTED = "Submitted"
+    PENDING_APPROVAL = "Pending Approval"
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+    ASSIGNED = "Assigned"
+    IN_PROGRESS = "In Progress"
+    WAITING_FOR_USER = "Waiting for User"
+    FULFILLED = "Fulfilled"
+    CLOSED = "Closed"
+    CANCELLED = "Cancelled"
+
+
+class ServiceRequestApprovalStatus:
+    NONE = "None"
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
+class SupportTeam:
+    SERVICE_DESK = "Service Desk"
+    ENDPOINT_SUPPORT = "Endpoint Support"
+    NETWORK_SUPPORT = "Network Support"
+    APPLICATION_SUPPORT = "Application Support"
+    M365_SUPPORT = "Microsoft 365 Support"
+    GOOGLE_WORKSPACE_SUPPORT = "Google Workspace Support"
+    HARDWARE_SUPPORT = "Hardware Support"
+    SECURITY = "Security"
+
+
+class ServiceRequestCategory:
+    HARDWARE = "Hardware"
+    SOFTWARE = "Software"
+    ACCESS = "Access"
+    MICROSOFT_365 = "Microsoft 365"
+    GOOGLE_WORKSPACE = "Google Workspace"
+    NETWORK = "Network"
+    MOBILE = "Mobile"
+    ACCOUNT = "Account"
+    ONBOARDING = "Onboarding"
+    GENERAL_IT = "General IT"
+
+
 # ---------------------------------------------------------------------------
 # USERS
 # ---------------------------------------------------------------------------
@@ -104,6 +148,20 @@ class User(Base, TimestampMixin):
     comments: Mapped[List["TicketComment"]] = relationship("TicketComment", back_populates="user")
     assigned_assets: Mapped[List["Asset"]] = relationship("Asset", back_populates="assigned_user")
     audit_logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="user")
+
+    # Service Request Relationships
+    created_service_requests: Mapped[List["ServiceRequest"]] = relationship(
+        "ServiceRequest", back_populates="requester", foreign_keys="[ServiceRequest.requester_id]"
+    )
+    assigned_service_requests: Mapped[List["ServiceRequest"]] = relationship(
+        "ServiceRequest", back_populates="assignee", foreign_keys="[ServiceRequest.assigned_to]"
+    )
+    approved_service_requests: Mapped[List["ServiceRequest"]] = relationship(
+        "ServiceRequest", back_populates="approver", foreign_keys="[ServiceRequest.approver_id]"
+    )
+    service_request_comments: Mapped[List["ServiceRequestComment"]] = relationship(
+        "ServiceRequestComment", back_populates="user"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -456,3 +514,144 @@ class AuditLog(Base):
     )
 
     user: Mapped[Optional["User"]] = relationship("User", back_populates="audit_logs")
+
+
+# ---------------------------------------------------------------------------
+# SERVICE REQUEST MANAGEMENT MODULE
+# ---------------------------------------------------------------------------
+class ServiceRequestType(Base, TimestampMixin):
+    __tablename__ = "service_request_types"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), default=ServiceRequestCategory.GENERAL_IT, nullable=False, index=True)
+    default_priority: Mapped[str] = mapped_column(String(20), default=TicketPriority.MEDIUM, nullable=False)
+    approval_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    default_sla_hours: Mapped[int] = mapped_column(Integer, default=24, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    service_requests: Mapped[List["ServiceRequest"]] = relationship(
+        "ServiceRequest", back_populates="request_type"
+    )
+
+
+class ServiceRequest(Base, TimestampMixin):
+    __tablename__ = "service_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    request_number: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    priority: Mapped[str] = mapped_column(String(20), default=TicketPriority.MEDIUM, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), default=ServiceRequestStatus.SUBMITTED, nullable=False, index=True)
+
+    # Type & Requester
+    request_type_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("service_request_types.id"), nullable=False, index=True
+    )
+    requester_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True
+    )
+
+    # Approval Workflow
+    approval_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    approval_status: Mapped[str] = mapped_column(
+        String(30), default=ServiceRequestApprovalStatus.NONE, nullable=False
+    )
+    approver_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True
+    )
+    approval_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Assignment
+    assigned_to: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True, index=True
+    )
+    assigned_team: Mapped[Optional[str]] = mapped_column(
+        String(50), default=SupportTeam.SERVICE_DESK, nullable=True, index=True
+    )
+
+    # Request Context & Parameters
+    business_justification: Mapped[str] = mapped_column(Text, nullable=False)
+    required_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    asset_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("assets.id"), nullable=True, index=True
+    )
+    application_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    access_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    software_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    software_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    device_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Fulfillment & Resolution
+    fulfillment_details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    fulfilled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    request_type: Mapped["ServiceRequestType"] = relationship(
+        "ServiceRequestType", back_populates="service_requests"
+    )
+    requester: Mapped["User"] = relationship(
+        "User", back_populates="created_service_requests", foreign_keys=[requester_id]
+    )
+    approver: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="approved_service_requests", foreign_keys=[approver_id]
+    )
+    assignee: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="assigned_service_requests", foreign_keys=[assigned_to]
+    )
+    asset: Mapped[Optional["Asset"]] = relationship("Asset")
+    comments: Mapped[List["ServiceRequestComment"]] = relationship(
+        "ServiceRequestComment", back_populates="service_request", cascade="all, delete-orphan", order_by="ServiceRequestComment.created_at"
+    )
+    timeline: Mapped[List["ServiceRequestTimeline"]] = relationship(
+        "ServiceRequestTimeline", back_populates="service_request", cascade="all, delete-orphan", order_by="ServiceRequestTimeline.created_at"
+    )
+
+    __table_args__ = (
+        Index("ix_service_requests_created_at", "created_at"),
+        Index("ix_service_requests_status_priority", "status", "priority"),
+    )
+
+
+class ServiceRequestComment(Base):
+    __tablename__ = "service_request_comments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    request_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("service_requests.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
+    is_internal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=get_utc_now, nullable=False, index=True
+    )
+
+    service_request: Mapped["ServiceRequest"] = relationship("ServiceRequest", back_populates="comments")
+    user: Mapped["User"] = relationship("User", back_populates="service_request_comments")
+
+
+class ServiceRequestTimeline(Base):
+    __tablename__ = "service_request_timeline"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    request_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("service_requests.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=get_utc_now, nullable=False, index=True
+    )
+
+    service_request: Mapped["ServiceRequest"] = relationship("ServiceRequest", back_populates="timeline")
+    actor: Mapped["User"] = relationship("User")

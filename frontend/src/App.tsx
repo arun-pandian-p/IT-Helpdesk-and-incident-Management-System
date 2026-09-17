@@ -14,6 +14,11 @@ import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { ImprovementsPage } from './pages/ImprovementsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { ServiceDeskLandingPage } from './pages/ServiceDeskLandingPage';
+import { ServiceRequestListPage } from './pages/ServiceRequestListPage';
+import { CreateServiceRequestPage } from './pages/CreateServiceRequestPage';
+import { ServiceRequestDetailPage } from './pages/ServiceRequestDetailPage';
+import { UnifiedServiceDeskPage } from './pages/UnifiedServiceDeskPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -52,9 +57,22 @@ export function App() {
             }
           >
             <Route index element={<DashboardPage />} />
+            
+            {/* Service Desk Hub & Unified Work Queue */}
+            <Route path="service-desk" element={<ServiceDeskLandingPage />} />
+            <Route path="service-desk/all" element={<UnifiedServiceDeskPage />} />
+
+            {/* Dedicated Service Request Management Module */}
+            <Route path="service-requests" element={<ServiceRequestListPage />} />
+            <Route path="service-requests/create" element={<CreateServiceRequestPage />} />
+            <Route path="service-requests/:id" element={<ServiceRequestDetailPage />} />
+
+            {/* Incident Management Module */}
             <Route path="tickets" element={<TicketListPage />} />
             <Route path="tickets/new" element={<CreateTicketPage />} />
             <Route path="tickets/:id" element={<TicketDetailPage />} />
+
+            {/* Assets, Access, Onboarding, Governance */}
             <Route path="assets" element={<AssetsPage />} />
             <Route path="devices" element={<AssetsPage />} />
             <Route path="onboarding" element={<OnboardingPage />} />

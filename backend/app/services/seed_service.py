@@ -4,8 +4,9 @@ from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.db.base import Base
+from app.db.base import Base, get_utc_now
 from app.db.database import engine
+from app.services.service_request_service import record_sr_timeline
 from app.db.models import (
     AccessRequest,
     AccessRequestStatus,
@@ -31,6 +32,14 @@ from app.db.models import (
     UserRole,
     ImpactLevel,
     UrgencyLevel,
+    ServiceRequest,
+    ServiceRequestType,
+    ServiceRequestComment,
+    ServiceRequestTimeline,
+    ServiceRequestStatus,
+    ServiceRequestApprovalStatus,
+    SupportTeam,
+    ServiceRequestCategory,
 )
 from app.services.audit_service import log_audit
 from app.services.onboarding_service import create_default_tasks_for_request
@@ -45,8 +54,17 @@ def seed_database(db: Session):
     Base.metadata.create_all(bind=engine)
 
     # Check if already seeded
-    if db.query(User).filter(User.email == "admin@example.com").first():
-        print("Database already contains seed data.")
+    admin_user = db.query(User).filter(User.email == "admin@example.com").first()
+    if admin_user:
+        if db.query(ServiceRequestType).count() == 0:
+            print("Detected existing database without Service Requests. Seeding module data...")
+            employee_users = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+            support_users = db.query(User).filter(User.role == UserRole.SUPPORT).all()
+            hardware_assets = db.query(Asset).all()
+            seed_service_requests(db, admin_user, employee_users, support_users, hardware_assets)
+            print("Service Request module seeded successfully.")
+        else:
+            print("Database already contains seed data.")
         return
 
     print("Seeding users...")
@@ -744,5 +762,320 @@ def seed_database(db: Session):
         db.add(imp)
     db.flush()
 
+    # ---------------------------------------------------------------------------
+    # 7. SERVICE REQUEST MANAGEMENT MODULE (15 TYPES & 52 SERVICE REQUESTS)
+    # ---------------------------------------------------------------------------
+    seed_service_requests(db, admin_user, employees, engineers, list(assets_map.values()))
+
     db.commit()
-    print("Database seeding completed successfully! Total 100+ tickets, 16 users, 25 assets, 8 onboarding requests, 12 KB articles, 5 improvements.")
+    print("Database seeding completed successfully! Total 100+ tickets, 16 users, 25 assets, 15 request types, 52 service requests, 8 onboardings.")
+
+
+def seed_service_requests(
+    db: Session,
+    admin_user: User,
+    employee_users: List[User],
+    support_users: List[User],
+    hardware_assets: List[Asset],
+):
+    """Populates 15 standard Service Request catalog types and 52 realistic service requests."""
+    print("Seeding Service Request Management module (Catalog & 52 requests)...")
+
+    # A. 15 Standard Service Request Catalog Types
+    sr_types_definitions = [
+        ("New Laptop", "Request a new or replacement corporate laptop for standard or development workflows.", ServiceRequestCategory.HARDWARE, TicketPriority.HIGH, True, 48),
+        ("Software Installation", "Request installation and licensing for approved corporate desktop or cloud software.", ServiceRequestCategory.SOFTWARE, TicketPriority.MEDIUM, True, 24),
+        ("Application Access", "Request role-based access or permissions to an enterprise business application.", ServiceRequestCategory.ACCESS, TicketPriority.MEDIUM, True, 24),
+        ("Microsoft 365 License", "Provision or upgrade Microsoft 365 licenses (E3, E5, Copilot, Visio, Project).", ServiceRequestCategory.MICROSOFT_365, TicketPriority.HIGH, True, 24),
+        ("Email / Outlook Access", "Configure corporate email routing, delegates, or Outlook desktop profile.", ServiceRequestCategory.MICROSOFT_365, TicketPriority.MEDIUM, False, 12),
+        ("VPN Access", "Request secure remote VPN credentials and multi-factor client profiles.", ServiceRequestCategory.NETWORK, TicketPriority.HIGH, True, 24),
+        ("Shared Folder Access", "Request access permissions to departmental network drives or SharePoint document libraries.", ServiceRequestCategory.ACCESS, TicketPriority.MEDIUM, True, 24),
+        ("New Employee Account", "Provision corporate Active Directory credentials, email, and baseline access for a new hire.", ServiceRequestCategory.ACCOUNT, TicketPriority.CRITICAL, False, 12),
+        ("Password Reset", "Self-service or assisted domain password reset and MFA re-synchronization.", ServiceRequestCategory.ACCOUNT, TicketPriority.HIGH, False, 4),
+        ("Hardware Replacement", "Request replacement or upgrade for defective monitors, docking stations, or peripherals.", ServiceRequestCategory.HARDWARE, TicketPriority.HIGH, True, 72),
+        ("Mobile Device Request", "Request corporate smartphone enrollment or cellular data plan provisioning.", ServiceRequestCategory.MOBILE, TicketPriority.MEDIUM, True, 48),
+        ("Google Workspace Access", "Provision Google Workspace Enterprise account, shared drive, or Google Meet licenses.", ServiceRequestCategory.GOOGLE_WORKSPACE, TicketPriority.MEDIUM, True, 24),
+        ("Printer Access", "Map network office printers, secure badge release, or print queue driver configuration.", ServiceRequestCategory.HARDWARE, TicketPriority.LOW, False, 12),
+        ("Shared Mailbox Access", "Request send-as or read permissions to a departmental shared mailbox.", ServiceRequestCategory.MICROSOFT_365, TicketPriority.LOW, False, 16),
+        ("General IT Assistance", "Request non-incident technical consultation, standard moves, or equipment advice.", ServiceRequestCategory.GENERAL_IT, TicketPriority.LOW, False, 24),
+    ]
+
+    sr_types_map: Dict[str, ServiceRequestType] = {}
+    for name, desc, cat, pri, app_req, sla_hrs in sr_types_definitions:
+        st = ServiceRequestType(
+            name=name,
+            description=desc,
+            category=cat,
+            default_priority=pri,
+            approval_required=app_req,
+            default_sla_hours=sla_hrs,
+            is_active=True,
+        )
+        db.add(st)
+        db.flush()
+        sr_types_map[name] = st
+
+    # B. 52 Realistic Service Requests
+    raw_sr_specs = [
+        # Software Installation (10)
+        ("Install Docker Desktop for Container Development", "Software Installation", "Software", TicketPriority.MEDIUM, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Required for local Kubernetes microservice testing and Docker containerization.", "Docker Desktop", "4.28.0", None, 12, True),
+        ("Install Slack Desktop Client with Enterprise SSO", "Software Installation", "Software", TicketPriority.LOW, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.SERVICE_DESK, "Official collaboration tool for new team cross-functional sync.", "Slack", "4.36.140", None, 14, True),
+        ("Install Visual Studio Code & Python Extensions", "Software Installation", "Software", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Developer IDE required for backend API scripting and diagnostics.", "VS Code", "1.87.2", None, 10, True),
+        ("Install Figma Desktop App for UX Design Team", "Software Installation", "Software", TicketPriority.MEDIUM, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "UI wireframing and interactive design prototyping workflows.", "Figma", "116.15.4", None, 8, True),
+        ("Install Tableau Desktop for Financial Analytics", "Software Installation", "Software", TicketPriority.HIGH, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Quarterly corporate board revenue forecasting and modeling.", "Tableau Desktop", "2024.1", None, 3, False),
+        ("Install Postman Enterprise for API Integration Testing", "Software Installation", "Software", TicketPriority.MEDIUM, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.SERVICE_DESK, "Validating internal REST API endpoints and OAuth security tokens.", "Postman Pro", "10.24.0", None, 1, False),
+        ("Install IntelliJ IDEA Ultimate for Backend Engineers", "Software Installation", "Software", TicketPriority.HIGH, ServiceRequestStatus.APPROVED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Java Spring microservices codebase maintenance and profiling.", "IntelliJ IDEA", "2024.1", None, 2, False),
+        ("Install PyCharm Professional for Data Science Models", "Software Installation", "Software", TicketPriority.MEDIUM, ServiceRequestStatus.ASSIGNED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Machine learning pipeline development and regression analysis.", "PyCharm Pro", "2023.3", None, 2, False),
+        ("Install Wireshark Network Packet Analyzer", "Software Installation", "Software", TicketPriority.HIGH, ServiceRequestStatus.REJECTED, ServiceRequestApprovalStatus.REJECTED, SupportTeam.SECURITY, "Need packet inspection utility for network latency testing.", "Wireshark", "4.2.3", None, 6, False),
+        ("Install Zoom Rooms Client for Executive Boardroom", "Software Installation", "Software", TicketPriority.LOW, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.SERVICE_DESK, "Executive weekly all-hands meeting broadcast.", "Zoom", "5.17.11", None, 11, True),
+
+        # Application Access (8)
+        ("Salesforce CRM Access for Enterprise Account Executives", "Application Access", "Access", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Promoted to Senior Account Executive; require pipeline opportunity edit rights.", None, None, "Salesforce CRM", 14, True),
+        ("SAP ERP Financial Accounting Module Access", "Application Access", "Access", TicketPriority.CRITICAL, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Month-end general ledger reconciliations and journal voucher approval.", None, None, "SAP ERP", 9, True),
+        ("Jira Software Administrator Access for Project Tracking", "Application Access", "Access", TicketPriority.MEDIUM, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Configuring scrum workflows and custom ticket issue types.", None, None, "Jira Software", 4, False),
+        ("AWS Production Cloud Console Read-Only Audit Access", "Application Access", "Access", TicketPriority.HIGH, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.SECURITY, "Quarterly SOC2 compliance evidence collection and IAM review.", None, None, "AWS Console", 1, False),
+        ("GitHub Enterprise Organization Member Permissions", "Application Access", "Access", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Need access to internal repos and pull request reviews.", None, None, "GitHub Enterprise", 13, True),
+        ("Snowflake Data Warehouse Analyst Role Access", "Application Access", "Access", TicketPriority.HIGH, ServiceRequestStatus.APPROVED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Running business intelligence queries on data lake for Q3 KPIs.", None, None, "Snowflake", 2, False),
+        ("Workday HR Manager Portal Access for Annual Reviews", "Application Access", "Access", TicketPriority.MEDIUM, ServiceRequestStatus.ASSIGNED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Completing direct report annual compensation and performance evaluations.", None, None, "Workday", 2, False),
+        ("Datadog Infrastructure Monitoring Dashboard Access", "Application Access", "Access", TicketPriority.LOW, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Observing real-time latency and error rates for production web servers.", None, None, "Datadog", 7, True),
+
+        # Microsoft 365 License (6)
+        ("Microsoft 365 E5 Security & Compliance License Upgrade", "Microsoft 365 License", "Microsoft 365", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.M365_SUPPORT, "Required for Power BI integration, advanced threat protection, and eDiscovery.", None, None, "Microsoft 365 E5", 13, True),
+        ("Copilot for Microsoft 365 AI Productivity Add-on", "Microsoft 365 License", "Microsoft 365", TicketPriority.MEDIUM, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.M365_SUPPORT, "Executive pilot participant for generative AI drafting in Word and Excel.", None, None, "Copilot for M365", 1, False),
+        ("Microsoft Visio Plan 2 Architecture Diagramming License", "Microsoft 365 License", "Microsoft 365", TicketPriority.LOW, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.M365_SUPPORT, "Creating systems architecture diagrams and process flow schematics.", None, None, "Visio Plan 2", 6, True),
+        ("Microsoft Project Plan 3 Enterprise Portfolio Management", "Microsoft 365 License", "Microsoft 365", TicketPriority.MEDIUM, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.M365_SUPPORT, "Managing multi-team resource allocation schedules and milestones.", None, None, "Project Plan 3", 3, False),
+        ("Power BI Pro Workspace Publishing License", "Microsoft 365 License", "Microsoft 365", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.M365_SUPPORT, "Publishing operational dashboards to executive workspaces.", None, None, "Power BI Pro", 12, True),
+        ("Exchange Online Archiving Expansion for Legal Hold", "Microsoft 365 License", "Microsoft 365", TicketPriority.HIGH, ServiceRequestStatus.APPROVED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.M365_SUPPORT, "Expanding mailbox capacity beyond 100GB for compliance retention.", None, None, "Exchange Archiving", 2, False),
+
+        # VPN Access (5)
+        ("Production VPC Secure Remote VPN Gateway Access", "VPN Access", "Network", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.NETWORK_SUPPORT, "Deploying hotfix updates to production servers outside of office network.", None, None, "Production VPN", 14, True),
+        ("Offshore Development Partner SSL VPN Tunnel", "VPN Access", "Network", TicketPriority.HIGH, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.NETWORK_SUPPORT, "Contractor team access to non-production staging environments.", None, None, "Contractor VPN", 8, True),
+        ("Remote Emergency Operations VPN Profile for On-Call Engineer", "VPN Access", "Network", TicketPriority.CRITICAL, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.NETWORK_SUPPORT, "Primary on-call incident responder required for 24/7 incident coverage.", None, None, "Emergency VPN", 2, False),
+        ("Global Partner Secure Gateway Profile", "VPN Access", "Network", TicketPriority.MEDIUM, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.NETWORK_SUPPORT, "Connecting joint venture audit partners to shared reporting repository.", None, None, "Partner VPN", 1, False),
+        ("Disaster Recovery Site Secondary VPN Gateway Configuration", "VPN Access", "Network", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.NETWORK_SUPPORT, "Annual business continuity and failover DR site testing.", None, None, "DR VPN", 11, True),
+
+        # New Laptop (5)
+        ("New MacBook Pro 16 M3 Max for Mobile iOS Lead", "New Laptop", "Hardware", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "High performance compute needed for iOS Swift compilation and simulator runs.", None, None, "MacBook Pro 16", 14, True),
+        ("Lenovo ThinkPad P16s High-Performance Mobile Workstation", "New Laptop", "Hardware", TicketPriority.HIGH, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Senior Data Analyst running intensive local PostgreSQL query simulations.", None, None, "ThinkPad P16s", 7, True),
+        ("Dell XPS 15 Corporate Ultrabook for Regional Sales Director", "New Laptop", "Hardware", TicketPriority.MEDIUM, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Replacing 4-year-old laptop out of warranty for frequent client visits.", None, None, "Dell XPS 15", 3, False),
+        ("Standard Engineering Laptop for New Graduate Hire", "New Laptop", "Hardware", TicketPriority.MEDIUM, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.HARDWARE_SUPPORT, "Onboarding engineering graduate starting next month in DevOps.", None, None, "Standard Laptop", 1, False),
+        ("Lightweight MacBook Air 15 M3 for People Operations", "New Laptop", "Hardware", TicketPriority.LOW, ServiceRequestStatus.APPROVED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Remote People Operations business partner requiring portable device.", None, None, "MacBook Air 15", 2, False),
+
+        # Hardware Replacement (4)
+        ("Dual 4K USB-C Monitor Display Setup for Financial Analysts", "Hardware Replacement", "Hardware", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Current monitor flickering intermittently; dual screen needed for financial sheets.", None, None, "Dual 4K Monitors", 12, True),
+        ("Ergonomic Split Keyboard & Vertical Mouse Occupational Request", "Hardware Replacement", "Hardware", TicketPriority.MEDIUM, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Occupational health ergonomic assessment recommendation for carpal tunnel.", None, None, "Ergonomic Peripherals", 8, True),
+        ("Universal Thunderbolt 4 Docking Station Replacement", "Hardware Replacement", "Hardware", TicketPriority.MEDIUM, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.APPROVED, SupportTeam.HARDWARE_SUPPORT, "Docking station Ethernet port unresponsive after power surge.", None, None, "Thunderbolt Dock", 3, False),
+        ("High-Capacity Laptop Battery Replacement for Dell Latitude", "Hardware Replacement", "Hardware", TicketPriority.HIGH, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.HARDWARE_SUPPORT, "Battery health degraded to 38%; unit will not hold charge beyond 20 minutes.", None, None, "Laptop Battery", 1, False),
+
+        # Password Reset (4)
+        ("Executive Active Directory Account Unlock & Password Reset", "Password Reset", "Account", TicketPriority.CRITICAL, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.NONE, SupportTeam.SERVICE_DESK, "Account locked out following multiple password attempts from secondary tablet.", None, None, "Active Directory", 13, True),
+        ("Self-Service Portal Authenticator App Re-registration", "Password Reset", "Account", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.NONE, SupportTeam.SERVICE_DESK, "Replaced personal phone; need MFA registration QR code regenerated.", None, None, "MFA Reset", 9, True),
+        ("SAP ERP Database Master Password Synchronization", "Password Reset", "Account", TicketPriority.MEDIUM, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.NONE, SupportTeam.SERVICE_DESK, "ERP password out of sync with domain single sign-on token.", None, None, "SAP Login", 5, True),
+        ("VPN Client Authentication Token Reseed Assistance", "Password Reset", "Account", TicketPriority.HIGH, ServiceRequestStatus.IN_PROGRESS, ServiceRequestApprovalStatus.NONE, SupportTeam.SERVICE_DESK, "Hardware token code rejected during remote connection handshake.", None, None, "VPN Token", 1, False),
+
+        # Google Workspace Access (3)
+        ("Google Workspace Enterprise Shared Drive Creation for Marketing", "Google Workspace Access", "Google Workspace", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.GOOGLE_WORKSPACE_SUPPORT, "Central repository for Q3 product campaign assets and 4K video footage.", None, None, "Google Shared Drive", 10, True),
+        ("Google Drive 2TB Cloud Storage Quota Increase", "Google Workspace Access", "Google Workspace", TicketPriority.LOW, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.GOOGLE_WORKSPACE_SUPPORT, "Video editing raw materials exceeding baseline 100GB corporate limit.", None, None, "Google Drive 2TB", 6, True),
+        ("Google Meet Hardware Room License for Dublin Office", "Google Workspace Access", "Google Workspace", TicketPriority.MEDIUM, ServiceRequestStatus.PENDING_APPROVAL, ServiceRequestApprovalStatus.PENDING, SupportTeam.GOOGLE_WORKSPACE_SUPPORT, "Equipping Dublin Conference Room B with touch controller and camera license.", None, None, "Meet Room License", 1, False),
+
+        # Mobile Device Request (3)
+        ("Apple iPhone 15 Pro Corporate Enrollment for Sales Director", "Mobile Device Request", "Mobile", TicketPriority.HIGH, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Director traveling internationally requires secure corporate phone with eSIM.", None, None, "iPhone 15 Pro", 12, True),
+        ("Samsung Galaxy S24 Ultra Android Enterprise Field Testing", "Mobile Device Request", "Mobile", TicketPriority.MEDIUM, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Testing internal warehouse scanning APK compatibility on Android 14.", None, None, "Galaxy S24 Ultra", 7, True),
+        ("Apple iPad Pro 12.9 Cellular Tablet for Quality Inspectors", "Mobile Device Request", "Mobile", TicketPriority.LOW, ServiceRequestStatus.ASSIGNED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.ENDPOINT_SUPPORT, "Site inspection checklist auditing on factory manufacturing floor.", None, None, "iPad Pro 12.9", 2, False),
+
+        # Shared Folder & Mailbox Access (2)
+        ("Finance Shared Mailbox Send-As & Full Access Rights", "Shared Mailbox Access", "Microsoft 365", TicketPriority.MEDIUM, ServiceRequestStatus.CLOSED, ServiceRequestApprovalStatus.NONE, SupportTeam.M365_SUPPORT, "Need authorization to process vendor accounts payable inquiries from ap@company.com.", None, None, "ap@company.com", 14, True),
+        ("Legal Department Confidential Contract Repository Shared Drive", "Shared Folder Access", "Access", TicketPriority.HIGH, ServiceRequestStatus.FULFILLED, ServiceRequestApprovalStatus.APPROVED, SupportTeam.APPLICATION_SUPPORT, "Corporate governance associate requires read/write access to NDAs and contracts.", None, None, "Legal Confidential", 8, True),
+    ]
+
+    base_time = get_utc_now()
+    all_seeded_srs: List[ServiceRequest] = []
+
+    for idx, spec in enumerate(raw_sr_specs, start=1):
+        (
+            title,
+            type_name,
+            cat,
+            pri,
+            stat,
+            app_stat,
+            team,
+            justification,
+            sw_name,
+            sw_ver,
+            app_name,
+            days_ago,
+            is_completed,
+        ) = spec
+
+        req_type = sr_types_map[type_name]
+        requester = employee_users[idx % len(employee_users)]
+        assignee = support_users[idx % len(support_users)] if stat != ServiceRequestStatus.PENDING_APPROVAL else None
+
+        created_dt = base_time - timedelta(days=days_ago, hours=idx % 8, minutes=idx * 7 % 60)
+        due_dt = created_dt + timedelta(hours=req_type.default_sla_hours)
+
+        fulfilled_dt = None
+        closed_dt = None
+        fulfillment_details_str = None
+        res_notes = None
+
+        if stat in [ServiceRequestStatus.FULFILLED, ServiceRequestStatus.CLOSED]:
+            # Set fulfilled date; 90% within SLA, 10% breached to show realistic charts
+            breached = (idx % 11 == 0)
+            delay_hours = req_type.default_sla_hours + 4 if breached else max(1, req_type.default_sla_hours - 6)
+            fulfilled_dt = created_dt + timedelta(hours=delay_hours)
+            if stat == ServiceRequestStatus.CLOSED:
+                closed_dt = fulfilled_dt + timedelta(hours=4)
+
+            res_notes = f"Service successfully fulfilled and verified by {assignee.name if assignee else 'IT Support'}."
+            f_data: Dict[str, Any] = {
+                "status": "Verified & Complete",
+                "completed_by": assignee.name if assignee else "IT Support Staff",
+                "completed_at": fulfilled_dt.isoformat(),
+            }
+            if sw_name:
+                f_data["software_name"] = sw_name
+                f_data["software_version"] = sw_ver or "Latest Stable"
+                f_data["license_key"] = f"LIC-ENT-{2026000 + idx}"
+            if app_name:
+                f_data["application"] = app_name
+                f_data["access_level"] = "Standard Role / Authorized"
+            if cat == "Hardware":
+                f_data["asset_tag"] = f"AST-2026-{100 + idx:04d}"
+                f_data["serial_number"] = f"SN{9823412 + idx}"
+            fulfillment_details_str = json.dumps(f_data)
+
+        # Asset link for hardware requests
+        linked_asset = hardware_assets[idx % len(hardware_assets)] if cat == "Hardware" else None
+
+        sr = ServiceRequest(
+            request_number=f"SR-2026-{idx:06d}",
+            title=title,
+            description=f"{title}. {justification}",
+            category=cat,
+            priority=pri,
+            status=stat,
+            request_type_id=req_type.id,
+            requester_id=requester.id,
+            approval_required=req_type.approval_required,
+            approval_status=app_stat,
+            approver_id=admin_user.id if app_stat in [ServiceRequestApprovalStatus.APPROVED, ServiceRequestApprovalStatus.REJECTED] else None,
+            approval_reason="Approved under standard IT operational delegation of authority." if app_stat == ServiceRequestApprovalStatus.APPROVED else ("Outside approved IT budget threshold." if app_stat == ServiceRequestApprovalStatus.REJECTED else None),
+            approved_at=created_dt + timedelta(hours=1) if app_stat in [ServiceRequestApprovalStatus.APPROVED, ServiceRequestApprovalStatus.REJECTED] else None,
+            assigned_to=assignee.id if assignee else None,
+            assigned_team=team,
+            business_justification=justification,
+            required_date=(created_dt + timedelta(days=2)).date(),
+            asset_id=linked_asset.id if linked_asset else None,
+            application_name=app_name,
+            access_level="Standard User" if app_name else None,
+            software_name=sw_name,
+            software_version=sw_ver,
+            device_type=linked_asset.device_type if linked_asset else None,
+            fulfillment_details=fulfillment_details_str,
+            resolution_notes=res_notes,
+            due_at=due_dt,
+            created_at=created_dt,
+            updated_at=closed_dt or fulfilled_dt or created_dt,
+            fulfilled_at=fulfilled_dt,
+            closed_at=closed_dt,
+        )
+        db.add(sr)
+        db.flush()
+
+        # Seed Timeline
+        record_sr_timeline(
+            db,
+            request_id=sr.id,
+            event_type="Submitted",
+            title="Service Request Submitted",
+            actor_id=requester.id,
+            description=f"Submitted by {requester.name} ({requester.department}).",
+        )
+
+        if sr.approval_required:
+            if sr.approval_status == ServiceRequestApprovalStatus.APPROVED:
+                record_sr_timeline(
+                    db,
+                    request_id=sr.id,
+                    event_type="Approved",
+                    title="Management Approved",
+                    actor_id=admin_user.id,
+                    description=f"Approved by IT Operations Manager {admin_user.name}.",
+                )
+            elif sr.approval_status == ServiceRequestApprovalStatus.REJECTED:
+                record_sr_timeline(
+                    db,
+                    request_id=sr.id,
+                    event_type="Rejected",
+                    title="Request Rejected",
+                    actor_id=admin_user.id,
+                    description=sr.approval_reason or "Request rejected.",
+                )
+
+        if assignee:
+            record_sr_timeline(
+                db,
+                request_id=sr.id,
+                event_type="Assigned",
+                title=f"Assigned to {team}",
+                actor_id=assignee.id,
+                description=f"Assigned to {assignee.name}.",
+            )
+
+        if stat in [ServiceRequestStatus.FULFILLED, ServiceRequestStatus.CLOSED]:
+            record_sr_timeline(
+                db,
+                request_id=sr.id,
+                event_type="Fulfilled",
+                title="Service Request Fulfilled",
+                actor_id=assignee.id if assignee else admin_user.id,
+                description=res_notes or "Technical service provisioned.",
+            )
+
+        if stat == ServiceRequestStatus.CLOSED:
+            record_sr_timeline(
+                db,
+                request_id=sr.id,
+                event_type="Confirmed",
+                title="User Confirmed Completion",
+                actor_id=requester.id,
+                description="Requester confirmed successful receipt and access.",
+            )
+
+        # Seed Comments
+        db.add(
+            ServiceRequestComment(
+                request_id=sr.id,
+                user_id=requester.id,
+                comment=f"Please note this is for the {requester.department} departmental workflow.",
+                is_internal=False,
+                created_at=created_dt + timedelta(minutes=15),
+            )
+        )
+        if assignee:
+            db.add(
+                ServiceRequestComment(
+                    request_id=sr.id,
+                    user_id=assignee.id,
+                    comment="Acknowledged. Verifying catalog entitlement and software licensing.",
+                    is_internal=False,
+                    created_at=created_dt + timedelta(hours=1),
+                )
+            )
+            db.add(
+                ServiceRequestComment(
+                    request_id=sr.id,
+                    user_id=assignee.id,
+                    comment="[Internal Support Note] Checked available pool; valid seat assigned.",
+                    is_internal=True,
+                    created_at=created_dt + timedelta(hours=2),
+                )
+            )
+
+        all_seeded_srs.append(sr)
+
+    db.commit()
+    print(f"Database seeding completed successfully! Total 100+ tickets, 16 users, 25 assets, 15 request types, 52 service requests, 8 onboardings.")
+

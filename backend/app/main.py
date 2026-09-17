@@ -16,6 +16,7 @@ from app.routers import (
     improvements,
     knowledge,
     onboarding,
+    service_requests,
     tickets,
     users,
 )
@@ -37,19 +38,20 @@ async def lifespan(app: FastAPI):
     
     # Check if database needs initial seeding
     from app.db.database import SessionLocal
-    from app.db.models import User
+    from app.db.models import User, ServiceRequestType
     from app.services.seed_service import seed_database
 
     db = SessionLocal()
     try:
         admin_user = db.query(User).filter(User.email == "admin@example.com").first()
-        if not admin_user:
-            logger.info("Demo users not found. Automatically populating enterprise demo data...")
+        sr_type_count = db.query(ServiceRequestType).count()
+        if not admin_user or sr_type_count == 0:
+            logger.info("Initializing enterprise demo data and Service Request catalog...")
             seed_database(db)
-            logger.info("Demo database seeded successfully.")
+            logger.info("Database models and service catalog seeded successfully.")
         else:
             user_count = db.query(User).count()
-            logger.info(f"Database already populated ({user_count} users).")
+            logger.info(f"Database already populated ({user_count} users, {sr_type_count} request types).")
     except Exception as e:
         logger.error(f"Error during startup database check/seed: {e}", exc_info=True)
     finally:
@@ -132,4 +134,5 @@ app.include_router(knowledge.router, prefix=settings.API_V1_STR)
 app.include_router(improvements.router, prefix=settings.API_V1_STR)
 app.include_router(categories.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
+app.include_router(service_requests.router, prefix=settings.API_V1_STR)
 app.include_router(dashboard.router, prefix=settings.API_V1_STR)

@@ -237,3 +237,164 @@ export interface DashboardSummary {
     resolved: number;
   }>;
 }
+
+// ---------------------------------------------------------------------------
+// SERVICE REQUEST MANAGEMENT MODULE TYPES
+// ---------------------------------------------------------------------------
+export type ServiceRequestStatus =
+  | 'Submitted'
+  | 'Pending Approval'
+  | 'Approved'
+  | 'Rejected'
+  | 'Assigned'
+  | 'In Progress'
+  | 'Waiting for User'
+  | 'Fulfilled'
+  | 'Closed'
+  | 'Cancelled';
+
+export type ServiceRequestApprovalStatus = 'None' | 'Pending' | 'Approved' | 'Rejected';
+
+export type SupportTeam =
+  | 'Service Desk'
+  | 'Endpoint Support'
+  | 'Network Support'
+  | 'Application Support'
+  | 'Microsoft 365 Support'
+  | 'Google Workspace Support'
+  | 'Hardware Support'
+  | 'Security';
+
+export interface ServiceRequestType {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  default_priority: TicketPriority;
+  approval_required: boolean;
+  default_sla_hours: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceRequestComment {
+  id: string;
+  request_id: string;
+  user_id: string;
+  user_name?: string;
+  user_role?: string;
+  comment: string;
+  is_internal: boolean;
+  created_at: string;
+}
+
+export interface ServiceRequestTimeline {
+  id: string;
+  request_id: string;
+  event_type: string;
+  title: string;
+  description?: string;
+  actor_id: string;
+  actor_name?: string;
+  actor_role?: string;
+  created_at: string;
+}
+
+export interface ServiceRequest {
+  id: string;
+  request_number: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: TicketPriority;
+  status: ServiceRequestStatus;
+  request_type_id: string;
+  request_type_name?: string;
+  requester_id: string;
+  requester_name?: string;
+  requester_email?: string;
+  requester_department?: string;
+  approval_required: boolean;
+  approval_status: ServiceRequestApprovalStatus;
+  approver_id?: string;
+  approver_name?: string;
+  approval_reason?: string;
+  approved_at?: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
+  assigned_team?: SupportTeam;
+  business_justification: string;
+  required_date?: string;
+  asset_id?: string;
+  asset_tag?: string;
+  asset_model?: string;
+  application_name?: string;
+  access_level?: string;
+  software_name?: string;
+  software_version?: string;
+  device_type?: string;
+  fulfillment_details?: string;
+  resolution_notes?: string;
+  due_at: string;
+  created_at: string;
+  updated_at: string;
+  fulfilled_at?: string;
+  closed_at?: string;
+  sla_status: SLAStatus;
+  is_breached: boolean;
+  comments?: ServiceRequestComment[];
+  timeline?: ServiceRequestTimeline[];
+}
+
+export interface ServiceRequestListResponse {
+  items: ServiceRequest[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface UnifiedWorkItem {
+  id: string;
+  item_type: 'Incident' | 'Service Request';
+  reference_number: string;
+  title: string;
+  category: string;
+  requester_id: string;
+  requester_name: string;
+  requester_department: string;
+  priority: TicketPriority;
+  status: string;
+  assigned_to_id?: string;
+  assigned_to_name?: string;
+  assigned_team?: string;
+  sla_status: SLAStatus;
+  is_breached: boolean;
+  due_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceRequestDashboardSummary {
+  total_requests: number;
+  pending_approval: number;
+  unassigned: number;
+  in_progress: number;
+  fulfilled: number;
+  closed: number;
+  sla_breached: number;
+  sla_at_risk: number;
+  sla_compliance_rate: number;
+  average_fulfillment_hours: number;
+  by_type: Record<string, number>;
+  by_category: Record<string, number>;
+  by_status: Record<string, number>;
+  by_team: Record<string, number>;
+  daily_trend: Array<{
+    date: string;
+    created: number;
+    fulfilled: number;
+  }>;
+}
+

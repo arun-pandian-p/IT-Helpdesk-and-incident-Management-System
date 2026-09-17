@@ -7,11 +7,18 @@ import {
   KnowledgeArticle,
   OnboardingRequest,
   OnboardingTask,
+  ServiceRequest,
+  ServiceRequestComment,
+  ServiceRequestDashboardSummary,
+  ServiceRequestListResponse,
+  ServiceRequestTimeline,
+  ServiceRequestType,
   Ticket,
   TicketCategory,
   TicketComment,
   TicketFeedback,
   TicketListResponse,
+  UnifiedWorkItem,
   User,
 } from '../types';
 
@@ -277,6 +284,82 @@ export const userService = {
   },
 };
 
+export const serviceRequestService = {
+  getRequestTypes: async (category?: string) => {
+    const res = await api.get<ServiceRequestType[]>('/service-request-types', { params: { category } });
+    return res.data;
+  },
+  createRequestType: async (payload: any) => {
+    const res = await api.post<ServiceRequestType>('/service-request-types', payload);
+    return res.data;
+  },
+  updateRequestType: async (id: string, payload: any) => {
+    const res = await api.patch<ServiceRequestType>(`/service-request-types/${id}`, payload);
+    return res.data;
+  },
+  getServiceRequests: async (params?: Record<string, any>) => {
+    const res = await api.get<ServiceRequestListResponse>('/service-requests', { params });
+    return res.data;
+  },
+  getServiceRequest: async (id: string) => {
+    const res = await api.get<ServiceRequest>(`/service-requests/${id}`);
+    return res.data;
+  },
+  createServiceRequest: async (payload: any) => {
+    const res = await api.post<ServiceRequest>('/service-requests', payload);
+    return res.data;
+  },
+  approveServiceRequest: async (id: string, reason?: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/approve`, { reason });
+    return res.data;
+  },
+  rejectServiceRequest: async (id: string, reason: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/reject`, { reason });
+    return res.data;
+  },
+  assignServiceRequest: async (id: string, payload: { assigned_to?: string; assigned_team?: string }) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/assign`, payload);
+    return res.data;
+  },
+  updateStatus: async (id: string, status: string, reason?: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/status`, { status, reason });
+    return res.data;
+  },
+  fulfillServiceRequest: async (
+    id: string,
+    payload: { fulfillment_details: Record<string, any> | string; resolution_notes: string }
+  ) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/fulfill`, payload);
+    return res.data;
+  },
+  confirmServiceRequest: async (id: string, feedbackNotes?: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/confirm`, { feedback_notes: feedbackNotes });
+    return res.data;
+  },
+  reportProblem: async (id: string, problemDescription: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/report-problem`, {
+      problem_description: problemDescription,
+    });
+    return res.data;
+  },
+  cancelServiceRequest: async (id: string, reason?: string) => {
+    const res = await api.post<ServiceRequest>(`/service-requests/${id}/cancel`, { reason });
+    return res.data;
+  },
+  addComment: async (id: string, payload: { comment: string; is_internal?: boolean }) => {
+    const res = await api.post<ServiceRequestComment>(`/service-requests/${id}/comments`, payload);
+    return res.data;
+  },
+  getDashboardStats: async () => {
+    const res = await api.get<ServiceRequestDashboardSummary>('/service-requests/dashboard/stats');
+    return res.data;
+  },
+  getUnifiedServiceDeskWork: async (params?: Record<string, any>) => {
+    const res = await api.get<UnifiedWorkItem[]>('/service-desk/unified', { params });
+    return res.data;
+  },
+};
+
 export const dashboardService = {
   getSummary: async () => {
     const res = await api.get<DashboardSummary>('/dashboard/summary');
@@ -285,3 +368,4 @@ export const dashboardService = {
 };
 
 export default api;
+

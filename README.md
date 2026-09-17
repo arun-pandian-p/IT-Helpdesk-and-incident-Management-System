@@ -51,40 +51,50 @@ This platform is my attempt to fix that, end to end.
    - If a "resolved" issue comes back, the ticket reopens straight into `In Progress`.
    - You can't resolve a ticket without writing down what actually fixed it.
 
-2. **Impact & Urgency Priority Matrix**
+2. **Dedicated Service Request Management (ITIL Catalog & Order Fulfillment)**
+   - Strict architectural and operational separation from Incidents:
+     - **Incident (`INC-YYYY-XXXXXX`)**: Unplanned interruption or reduction in quality ("Something is broken").
+     - **Service Request (`SR-YYYY-XXXXXX`)**: Standard workplace service, new equipment, license, or access order ("User requesting routine assistance or item").
+   - Formal multi-stage lifecycle: `Submitted` → `Pending Approval` → `Approved`/`Rejected` → `Assigned` → `In Progress` → `Fulfilled` → `Closed` (or `In Progress` on reported issue) / `Cancelled`.
+   - **Separation of Duties**: Requesters are strictly prohibited from approving their own service requests.
+   - **Technical Fulfillment**: Recording mandatory completion metadata (Asset Tag, Serial Number, License Key, System Role) and technical resolution notes.
+   - **Customer Verification**: Requester confirms fulfillment or reports problems directly back to engineering.
+   - Dedicated `/service-desk` portal landing page, `/service-desk/all` unified operational queue, and `/service-requests` catalog queue.
+
+3. **Impact & Urgency Priority Matrix**
    - Priority (`Critical`, `High`, `Medium`, `Low`) gets calculated from business impact (`Individual` up to `Company-wide`) crossed with urgency.
    - Support engineers can override that suggestion, but only with a reason on record.
 
-3. **Automated SLA Engine**
-   - Target windows: Critical 4h, High 24h, Medium 48h, Low 72h.
+4. **Automated SLA Engine**
+   - Target windows: Critical 4h, High 24h, Medium 48h, Low 72h (Service requests customized per catalog type: e.g. 4h–72h).
    - Live status: `Within SLA`, `At Risk` (25% of the window left or less), or `Breached`.
-   - Every timestamp that matters gets captured automatically: `created_at`, `first_response_at`, `due_at`, `resolved_at`, `closed_at`.
+   - Every timestamp that matters gets captured automatically: `created_at`, `first_response_at`, `due_at`, `resolved_at`, `fulfilled_at`, `closed_at`.
 
-4. **Interactive Hardware Diagnostics & Troubleshooting Checklists**
+5. **Interactive Hardware Diagnostics & Troubleshooting Checklists**
    - Covers laptops, desktops, monitors, printers, docking stations, mobile phones.
    - Checklists change based on the problem: power and cable checks for hardware, DISM/sfc for Windows 11, Jamf profiles for macOS, Outlook/Teams/Entra ID for Microsoft 365, and a separate path for Google Workspace.
    - Checkbox progress saves straight to the ticket, so nobody repeats a step the next engineer already tried.
 
-5. **IT Onboarding & Equipment Provisioning**
+6. **IT Onboarding & Equipment Provisioning**
    - Enter the new hire once (name, department, title, manager, start date, hardware needed).
-   - The system spins up 8 standard setup tasks automatically: identity creation, laptop imaging, Intune/Jamf enrollment, software installs, MFA/VPN setup, orientation.
+   - Automatically provisions onboarding service requests and 8 standard setup tasks: identity creation, laptop imaging, Intune/Jamf enrollment, software installs, MFA/VPN setup, orientation.
    - A progress bar updates live as each task closes out.
 
-6. **Access & Account Requests**
+7. **Access & Account Requests**
    - Covers password resets, MFA re-registration, shared drive access, and cloud app access requests.
    - Each request moves through `Requested` → `Approved` → `Completed` or `Rejected`.
 
-7. **Knowledge Base & OS Support Guides**
+8. **Knowledge Base & OS Support Guides**
    - Self-service articles filtered by platform: Windows 11/10, macOS Sonoma, iOS, Android Enterprise.
    - Users vote articles helpful or not, so the weak ones surface for a rewrite.
 
-8. **In-App Operational Analytics & Dashboards**
-   - Recharts-driven views: 14-day volume (opened vs. resolved), where tickets sit in the lifecycle, priority breakdown, SLA compliance.
+9. **In-App Operational Analytics & Dashboards**
+   - Recharts-driven views: 14-day volume (opened vs. resolved), lifecycle distribution, priority breakdown, SLA compliance, and service request catalog distribution.
 
-9. **Security, RBAC & Audit Trail**
-   - Passwords hashed with Bcrypt, sessions handled with signed JWTs.
-   - Every role's permissions are enforced on the backend, not just hidden in the UI.
-   - Every creation, status change, and reassignment gets logged, and that log can't be altered after the fact.
+10. **Security, RBAC & Audit Trail**
+    - Passwords hashed with Bcrypt, sessions handled with signed JWTs.
+    - Every role's permissions are enforced on the backend, not just hidden in the UI.
+    - Every creation, status change, and reassignment gets logged, and that log can't be altered after the fact.
 
 ---
 
