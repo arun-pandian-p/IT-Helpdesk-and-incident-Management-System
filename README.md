@@ -279,7 +279,7 @@ For anyone evaluating the portfolio, these are pre-seeded:
 | Role | Email | Password | Assigned Name & Department |
 | :--- | :--- | :--- | :--- |
 | **Employee** | `employee@example.com` | `Password123!` | Jordan Reed (Senior Financial Analyst, Finance) |
-| **Support Engineer** | `support@example.com` | `Password123!` | Alex Turner (Tier 2 Lead Support Specialist) |
+| **Support Engineer** | `support@example.com` | `Password123!` | Arun Pandian (Tier 2 Lead Support Specialist) |
 | **IT Administrator** | `admin@example.com` | `Password123!` | David Miller (IT Director & Service Desk Lead) |
 
 *The login page has one-click buttons for all three, so you don't have to type these in.*

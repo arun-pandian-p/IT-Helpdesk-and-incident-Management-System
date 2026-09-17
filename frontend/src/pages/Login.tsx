@@ -130,7 +130,7 @@ export const Login: React.FC = () => {
                   <Wrench className="w-3.5 h-3.5" />
                 </div>
                 <span className="text-[11px] font-semibold text-slate-800">Support T2</span>
-                <span className="text-[9px] text-slate-500">Alex Turner</span>
+                <span className="text-[9px] text-slate-500">Arun Pandian</span>
               </button>
 
               <button

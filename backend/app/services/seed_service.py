@@ -89,7 +89,7 @@ def seed_database(db: Session):
 
     # 5 Support Engineers
     engineers_data = [
-        ("Alex Turner", "support@example.com", "Tier 2 Lead Support Specialist", "+1-555-0101"),
+        ("Arun Pandian", "support@example.com", "Tier 2 Lead Support Specialist", "+1-555-0101"),
         ("Priya Patel", "priya.patel@example.com", "Senior Systems Support Engineer", "+1-555-0102"),
         ("Marcus Vance", "marcus.vance@example.com", "Network & Security Support Analyst", "+1-555-0103"),
         ("Elena Rostova", "elena.rostova@example.com", "Workplace Technology & Apple Specialist", "+1-555-0104"),
