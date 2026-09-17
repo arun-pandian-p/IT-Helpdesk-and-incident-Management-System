@@ -1,9 +1,11 @@
+
 # IT Helpdesk & End-User Support Management System
 
 An internal service desk and technical support app, built ITIL-style, on **FastAPI**, **PostgreSQL**, **SQLAlchemy**, **Alembic**, **React (TypeScript + Vite)**, **Tailwind CSS**, and **Recharts**.
 
 > [!IMPORTANT]
 > **Disclaimer**: This is a portfolio project. It borrows ITIL concepts to model real incident management, hardware diagnostics, and SLA tracking, but it isn't ITIL-certified and doesn't claim to be.
+<img width="1910" height="855" alt="image" src="https://github.com/user-attachments/assets/fcec08fc-b9df-4dd8-8c97-5825dc95b29e" />
 
 ---
 
@@ -125,7 +127,6 @@ This platform is my attempt to fix that, end to end.
 ```
 
 ---
-<img width="1910" height="855" alt="image" src="https://github.com/user-attachments/assets/fcec08fc-b9df-4dd8-8c97-5825dc95b29e" />
 
 ## Technology Stack
 
