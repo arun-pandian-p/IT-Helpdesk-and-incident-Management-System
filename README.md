@@ -116,6 +116,7 @@ This platform provides an integrated internal IT service desk enabling:
 ```
 
 ---
+<img width="1910" height="855" alt="image" src="https://github.com/user-attachments/assets/fcec08fc-b9df-4dd8-8c97-5825dc95b29e" />
 
 ## Technology Stack
 
