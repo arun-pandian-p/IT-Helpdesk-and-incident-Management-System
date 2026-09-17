@@ -96,3 +96,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user)):
     """Retrieves profile of currently authenticated user."""
     return UserOut.model_validate(current_user)
+
+
+@router.post("/seed")
+def seed_demo_data(db: Session = Depends(get_db)):
+    """Idempotently seeds enterprise demo accounts, tickets, assets, and guides."""
+    from app.services.seed_service import seed_database
+    seed_database(db)
+    return {"message": "Demo data populated successfully with 16 users and 105+ tickets."}

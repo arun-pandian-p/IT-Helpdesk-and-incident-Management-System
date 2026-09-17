@@ -42,12 +42,13 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     try:
-        user_count = db.query(User).count()
-        if user_count == 0:
-            logger.info("Database is empty. Automatically populating enterprise demo data...")
+        admin_user = db.query(User).filter(User.email == "admin@example.com").first()
+        if not admin_user:
+            logger.info("Demo users not found. Automatically populating enterprise demo data...")
             seed_database(db)
             logger.info("Demo database seeded successfully.")
         else:
+            user_count = db.query(User).count()
             logger.info(f"Database already populated ({user_count} users).")
     except Exception as e:
         logger.error(f"Error during startup database check/seed: {e}", exc_info=True)
