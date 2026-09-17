@@ -1,9 +1,9 @@
 # IT Helpdesk & End-User Support Management System
 
-An enterprise-grade, **ITIL-inspired** internal service desk and technical support management application built with **FastAPI**, **PostgreSQL**, **SQLAlchemy**, **Alembic**, **React (TypeScript + Vite)**, **Tailwind CSS**, and **Recharts**.
+An internal service desk and technical support app, built ITIL-style, on **FastAPI**, **PostgreSQL**, **SQLAlchemy**, **Alembic**, **React (TypeScript + Vite)**, **Tailwind CSS**, and **Recharts**.
 
 > [!IMPORTANT]
-> **Disclaimer**: This project is an **ITIL-inspired educational and portfolio implementation** demonstrating real-world technical support, incident management, hardware diagnostics, and SLA monitoring. It does not claim formal ITIL compliance or official certification.
+> **Disclaimer**: This is a portfolio project. It borrows ITIL concepts to model real incident management, hardware diagnostics, and SLA tracking, but it isn't ITIL-certified and doesn't claim to be.
 
 ---
 
@@ -31,49 +31,58 @@ An enterprise-grade, **ITIL-inspired** internal service desk and technical suppo
 
 ## Overview & Business Problem
 
-Modern enterprise IT organizations struggle with ticket chaos, uncoordinated hardware allocations, untracked SLA breaches, and disjointed onboarding experiences. 
+Most IT teams know this pain: tickets pile up with no clear order, laptops get handed out with no record of who has what, SLA deadlines slip quietly until someone complains, and new hires sit around on day one waiting for accounts that should've been ready.
 
-This platform provides an integrated internal IT service desk enabling:
-- **Employees** to self-diagnose using searchable knowledge guides, report hardware/software incidents with full environmental context (device serial, OS, application, impact, urgency), request access, and track live SLA progress.
-- **IT Support Engineers** to prioritize queues via an Impact × Urgency matrix, execute interactive diagnostic troubleshooting checklists, track first-response and resolution SLAs, escalate to Tier 2/Tier 3 specialists, document resolution notes, and capture Customer Satisfaction (CSAT) ratings.
-- **IT Managers & Admins** to monitor operational KPIs (MTTR, first response velocity, SLA compliance, CSAT), govern hardware inventory lifecycle (warranty tracking, user allocations), supervise new hire onboarding task progression (0–100%), and maintain an immutable compliance audit trail.
+This platform is my attempt to fix that, end to end.
+
+- **Employees** search a knowledge base before opening a ticket, and when they do open one, they attach the real context: device serial, OS, which app is broken, how bad it is. They can request access and watch their SLA countdown in real time.
+- **Support engineers** work a queue sorted by an Impact × Urgency matrix, run through diagnostic checklists instead of guessing, track first-response and resolution SLAs, escalate up to Tier 2/3 when needed, and close tickets with resolution notes and a CSAT rating attached.
+- **IT managers and admins** watch the numbers that actually matter: MTTR, first-response speed, SLA compliance, CSAT. They also own hardware inventory (warranties, who has what), track new-hire onboarding progress from 0 to 100%, and can pull up an audit trail that can't be edited after the fact.
 
 ---
 
 ## Key Capabilities & Features
 
-1. **Incident & Ticket Lifecycle Management**:
-   - Human-readable sequential numbering: `INC-YYYY-XXXXXX`.
-   - Real-time status state machine: `Open` &rarr; `In Progress` &rarr; `Waiting for User` &rarr; `Waiting for Vendor` &rarr; `Escalated` &rarr; `Resolved` &rarr; `Closed`.
-   - Ticket reopening from `Resolved` &rarr; `In Progress` when users report an issue persists.
-   - Mandatory resolution notes enforced before an incident can be resolved.
-2. **Impact & Urgency Priority Matrix**:
-   - Computes suggested priority (`Critical`, `High`, `Medium`, `Low`) based on business impact (`Individual`, `Team`, `Department`, `Multiple Departments`, `Company-wide`) and urgency.
-   - Authorized support engineers can override suggested priority with mandatory recorded rationale.
-3. **Automated SLA Engine**:
-   - Configurable target resolution windows (Critical: 4h, High: 24h, Medium: 48h, Low: 72h).
-   - Real-time SLA derivation: `Within SLA`, `At Risk` (approaching deadline or &le; 25% remaining), and `Breached`.
-   - Automatic timestamp capture for `created_at`, `first_response_at`, `due_at`, `resolved_at`, and `closed_at`.
-4. **Interactive Hardware Diagnostics & Troubleshooting Checklists**:
-   - Device context: Laptops, Desktops, Monitors, Printers, Docking Stations, Mobile Phones.
-   - Dynamic diagnostic checklists for Hardware (power drain, cable inspection, RAM/battery checks), Operating Systems (Windows 11 DISM/sfc, macOS Jamf profiles), Microsoft 365 (Outlook profiles, Teams cache, Entra ID), and Google Workspace.
-   - Saves checkbox states directly to the incident record.
-5. **IT Onboarding & Equipment Provisioning**:
-   - New hire intake orchestration (Employee, Department, Job Title, Manager, Start Date, Hardware Requirement).
-   - Automatically generates 8 standardized IT setup tasks (Identity creation, laptop imaging, Intune/Jamf MDM enrollment, software installation, MFA/VPN setup, orientation).
-   - Real-time progress bar (0–100%) recalculating dynamically upon task completion.
-6. **Access & Account Requests**:
-   - Service catalog for Password Resets, MFA Re-registration, Department Shared Drives, and Cloud Application Access.
-   - Security approval flow (`Requested` &rarr; `Approved` &rarr; `Completed` / `Rejected`).
-7. **Knowledge Base & OS Support Guides**:
-   - Self-service articles with OS platform filtering (Windows 11/10, macOS Sonoma, Apple iOS, Android Enterprise).
-   - User feedback thumbs voting (`helpful_count`, `not_helpful_count`).
-8. **In-App Operational Analytics & Dashboards**:
-   - Recharts-powered interactive analytics: 14-day volume velocity (created vs. resolved), lifecycle status distribution, priority breakdown, and SLA compliance.
-9. **Security, RBAC & Regulatory Audit Trail**:
-   - Secure Bcrypt password hashing and signed JWT authentication.
-   - Role-based authorization enforced on the backend.
-   - Immutable audit trail recording every entity creation, status change, and user assignment.
+1. **Incident & Ticket Lifecycle Management**
+   - Tickets get a readable ID: `INC-YYYY-XXXXXX`, not a random UUID nobody can reference on a call.
+   - Status moves through a real state machine: `Open` → `In Progress` → `Waiting for User` → `Waiting for Vendor` → `Escalated` → `Resolved` → `Closed`.
+   - If a "resolved" issue comes back, the ticket reopens straight into `In Progress`.
+   - You can't resolve a ticket without writing down what actually fixed it.
+
+2. **Impact & Urgency Priority Matrix**
+   - Priority (`Critical`, `High`, `Medium`, `Low`) gets calculated from business impact (`Individual` up to `Company-wide`) crossed with urgency.
+   - Support engineers can override that suggestion, but only with a reason on record.
+
+3. **Automated SLA Engine**
+   - Target windows: Critical 4h, High 24h, Medium 48h, Low 72h.
+   - Live status: `Within SLA`, `At Risk` (25% of the window left or less), or `Breached`.
+   - Every timestamp that matters gets captured automatically: `created_at`, `first_response_at`, `due_at`, `resolved_at`, `closed_at`.
+
+4. **Interactive Hardware Diagnostics & Troubleshooting Checklists**
+   - Covers laptops, desktops, monitors, printers, docking stations, mobile phones.
+   - Checklists change based on the problem: power and cable checks for hardware, DISM/sfc for Windows 11, Jamf profiles for macOS, Outlook/Teams/Entra ID for Microsoft 365, and a separate path for Google Workspace.
+   - Checkbox progress saves straight to the ticket, so nobody repeats a step the next engineer already tried.
+
+5. **IT Onboarding & Equipment Provisioning**
+   - Enter the new hire once (name, department, title, manager, start date, hardware needed).
+   - The system spins up 8 standard setup tasks automatically: identity creation, laptop imaging, Intune/Jamf enrollment, software installs, MFA/VPN setup, orientation.
+   - A progress bar updates live as each task closes out.
+
+6. **Access & Account Requests**
+   - Covers password resets, MFA re-registration, shared drive access, and cloud app access requests.
+   - Each request moves through `Requested` → `Approved` → `Completed` or `Rejected`.
+
+7. **Knowledge Base & OS Support Guides**
+   - Self-service articles filtered by platform: Windows 11/10, macOS Sonoma, iOS, Android Enterprise.
+   - Users vote articles helpful or not, so the weak ones surface for a rewrite.
+
+8. **In-App Operational Analytics & Dashboards**
+   - Recharts-driven views: 14-day volume (opened vs. resolved), where tickets sit in the lifecycle, priority breakdown, SLA compliance.
+
+9. **Security, RBAC & Audit Trail**
+   - Passwords hashed with Bcrypt, sessions handled with signed JWTs.
+   - Every role's permissions are enforced on the backend, not just hidden in the UI.
+   - Every creation, status change, and reassignment gets logged, and that log can't be altered after the fact.
 
 ---
 
@@ -120,25 +129,25 @@ This platform provides an integrated internal IT service desk enabling:
 
 ## Technology Stack
 
-- **Backend**:
+- **Backend**
   - Python 3.12+
   - FastAPI (REST framework)
   - Pydantic v2 & Pydantic-Settings
   - SQLAlchemy 2.0 (ORM)
-  - Alembic (Database migrations)
-  - PostgreSQL / SQLite (Dual-mode dialect support)
-  - PyJWT & Bcrypt (Authentication and password security)
-  - Pytest & HTTPX (Automated test suite)
-- **Frontend**:
+  - Alembic (database migrations)
+  - PostgreSQL / SQLite (dual-mode dialect support)
+  - PyJWT & Bcrypt (auth and password security)
+  - Pytest & HTTPX (automated test suite)
+- **Frontend**
   - React 19
   - TypeScript 5
   - Vite 6
   - Tailwind CSS
   - React Router v6
   - Axios (with JWT interceptors)
-  - Recharts (Interactive SVG data visualizations)
-  - Lucide React (Enterprise iconography)
-- **DevOps & Infrastructure**:
+  - Recharts (interactive SVG charts)
+  - Lucide React (icon set)
+- **DevOps & Infrastructure**
   - Docker & Docker Compose
   - Multi-stage Nginx container build
   - Git version control
@@ -148,22 +157,22 @@ This platform provides an integrated internal IT service desk enabling:
 ## Database Schema & ERD
 
 ### Tables
-1. `users`: Identity accounts, credentials, role (`EMPLOYEE`, `SUPPORT`, `ADMIN`), department, job title, phone, location.
-2. `ticket_categories`: Hardware, Software, Network, Email, Access/Login, Microsoft 365, Google Workspace, Mobile Device, Security, Printer, VPN, Other.
-3. `assets`: Hardware inventory with `asset_tag`, `device_type`, `manufacturer`, `model`, `serial_number`, `status`, `assigned_user_id`, `warranty_expiry`.
-4. `asset_assignments`: History of device allocations and returns.
-5. `tickets`: Core incident records with `ticket_number` (`INC-YYYY-XXXXXX`), `impact`, `urgency`, `priority`, `status`, `asset_id`, `device_type`, `os_name`, `application_name`, `due_at`, `first_response_at`, `resolved_at`, `closed_at`, `resolution_notes`, `checklist_state`.
-6. `ticket_comments`: Public and internal troubleshooting notes.
-7. `ticket_status_history`: Audit trail for every lifecycle status transition.
-8. `ticket_assignments`: Engineer allocation logs.
-9. `ticket_escalations`: Tier 2 / Tier 3 escalation records with recorded reason.
-10. `ticket_feedback`: CSAT ratings (1–5 stars) and user comments.
-11. `knowledge_articles`: Searchable documentation with `os_target` and helpfulness votes.
-12. `onboarding_requests`: New hire intake details, department, hardware needs, and `progress_percent`.
-13. `onboarding_tasks`: 8 discrete technical provisioning tasks per request.
-14. `access_requests`: Identity service catalog requests and approval tracking.
-15. `improvement_requests`: Continuous service improvement initiatives.
-16. `audit_logs`: Immutable security audit log tracking actors, actions, and entities.
+1. `users` — accounts, credentials, role (`EMPLOYEE`, `SUPPORT`, `ADMIN`), department, job title, phone, location.
+2. `ticket_categories` — Hardware, Software, Network, Email, Access/Login, Microsoft 365, Google Workspace, Mobile Device, Security, Printer, VPN, Other.
+3. `assets` — hardware inventory: `asset_tag`, `device_type`, `manufacturer`, `model`, `serial_number`, `status`, `assigned_user_id`, `warranty_expiry`.
+4. `asset_assignments` — history of who had which device and when.
+5. `tickets` — the core incident record: `ticket_number` (`INC-YYYY-XXXXXX`), `impact`, `urgency`, `priority`, `status`, `asset_id`, `device_type`, `os_name`, `application_name`, `due_at`, `first_response_at`, `resolved_at`, `closed_at`, `resolution_notes`, `checklist_state`.
+6. `ticket_comments` — public and internal troubleshooting notes.
+7. `ticket_status_history` — every lifecycle transition, logged.
+8. `ticket_assignments` — who was assigned when.
+9. `ticket_escalations` — Tier 2/3 escalations, with the reason recorded.
+10. `ticket_feedback` — CSAT ratings (1–5 stars) plus comments.
+11. `knowledge_articles` — docs, tagged by `os_target`, with helpfulness votes.
+12. `onboarding_requests` — new hire intake: department, hardware needs, `progress_percent`.
+13. `onboarding_tasks` — the 8 provisioning tasks per request.
+14. `access_requests` — identity requests and their approval status.
+15. `improvement_requests` — ideas for improving the service, tracked like anything else.
+16. `audit_logs` — who did what, when, immutably.
 
 ---
 
@@ -235,7 +244,7 @@ This platform provides an integrated internal IT service desk enabling:
 ## ITIL-Inspired Priority Matrix & SLA Logic
 
 ### Impact × Urgency Matrix
-Priority is derived automatically upon submission and can be overridden by support technicians:
+Priority is set automatically the moment a ticket is submitted. Support techs can override it if the math doesn't match reality:
 
 | Business Impact \ Urgency | Critical | High | Medium | Low |
 | :--- | :---: | :---: | :---: | :---: |
@@ -246,15 +255,15 @@ Priority is derived automatically upon submission and can be overridden by suppo
 | **Individual** | **High** (24h) | **Medium** (48h) | **Medium** (48h) | **Low** (72h) |
 
 ### SLA Status Classification
-- **Within SLA**: Unresolved ticket with time remaining &gt; 25% of target window, or ticket resolved before `due_at`.
-- **At Risk**: Time remaining &le; 4 hours or &le; 25% of target window.
-- **Breached**: Current timestamp &gt; `due_at` while unresolved, or `resolved_at` &gt; `due_at`.
+- **Within SLA**: more than 25% of the target window left, or already resolved before `due_at`.
+- **At Risk**: 4 hours or 25% of the window left, whichever comes first.
+- **Breached**: past `due_at` and still open, or was resolved after `due_at`.
 
 ---
 
 ## Demo Accounts & Credentials
 
-For portfolio evaluation, demo accounts are pre-seeded:
+For anyone evaluating the portfolio, these are pre-seeded:
 
 | Role | Email | Password | Assigned Name & Department |
 | :--- | :--- | :--- | :--- |
@@ -262,60 +271,60 @@ For portfolio evaluation, demo accounts are pre-seeded:
 | **Support Engineer** | `support@example.com` | `Password123!` | Alex Turner (Tier 2 Lead Support Specialist) |
 | **IT Administrator** | `admin@example.com` | `Password123!` | David Miller (IT Director & Service Desk Lead) |
 
-*The login page includes convenient 1-click demo account buttons.*
+*The login page has one-click buttons for all three, so you don't have to type these in.*
 
 ---
 
 ## REST API Specification
 
 ### Authentication
-- `POST /api/auth/register` — Register a new internal employee account.
-- `POST /api/auth/login` — Exchange credentials for signed JWT access token.
-- `GET /api/auth/me` — Retrieve current authenticated user profile.
+- `POST /api/auth/register` — register a new employee account.
+- `POST /api/auth/login` — trade credentials for a signed JWT.
+- `GET /api/auth/me` — get the current user's profile.
 
 ### Incident Management
-- `POST /api/tickets` — Create a technical incident (calculates priority matrix, sets SLA due date, logs audit).
-- `GET /api/tickets` — Paginated list with filtering by status, priority, category, SLA status, and keyword search.
-- `GET /api/tickets/{id}` — Full incident details with timeline, diagnostic checklist, and CSAT feedback.
-- `POST /api/tickets/{id}/assign` — Assign incident to support technician (auto-transitions Open &rarr; In Progress).
-- `POST /api/tickets/{id}/status` — Update lifecycle status with validation and audit history.
-- `POST /api/tickets/{id}/override-priority` — Override matrix priority with recorded rationale.
-- `POST /api/tickets/{id}/escalate` — Escalate incident to Tier 2 / Tier 3.
-- `POST /api/tickets/{id}/resolve` — Resolve incident (requires resolution notes).
-- `POST /api/tickets/{id}/close` — Permanently close incident.
-- `POST /api/tickets/{id}/reopen` — Reopen resolved incident back to In Progress.
-- `POST /api/tickets/{id}/comments` — Post customer-facing communication or internal support notes.
-- `PATCH /api/tickets/{id}/checklist` — Persist diagnostic checklist execution state.
-- `POST /api/tickets/{id}/feedback` — Submit CSAT 1–5 star rating and comment.
+- `POST /api/tickets` — create a ticket (runs the priority matrix, sets the SLA due date, logs it).
+- `GET /api/tickets` — paginated list, filterable by status, priority, category, SLA state, keyword.
+- `GET /api/tickets/{id}` — full detail: timeline, checklist, CSAT feedback.
+- `POST /api/tickets/{id}/assign` — assign to a technician (auto-moves Open → In Progress).
+- `POST /api/tickets/{id}/status` — change status, with validation and an audit entry.
+- `POST /api/tickets/{id}/override-priority` — override the matrix, reason required.
+- `POST /api/tickets/{id}/escalate` — send to Tier 2/3.
+- `POST /api/tickets/{id}/resolve` — resolve (resolution notes required).
+- `POST /api/tickets/{id}/close` — close for good.
+- `POST /api/tickets/{id}/reopen` — send a resolved ticket back to In Progress.
+- `POST /api/tickets/{id}/comments` — post a customer-facing or internal note.
+- `PATCH /api/tickets/{id}/checklist` — save checklist progress.
+- `POST /api/tickets/{id}/feedback` — submit a 1–5 star CSAT rating and comment.
 
 ### Hardware Asset Inventory
-- `GET /api/assets` — List computing hardware inventory with device types and serials.
-- `GET /api/assets/my-devices` — Retrieve devices allocated to the authenticated employee.
-- `POST /api/assets` — Register new computing asset into inventory.
-- `PATCH /api/assets/{id}` — Update asset status, warranty, or employee assignment.
+- `GET /api/assets` — list inventory with device type and serial.
+- `GET /api/assets/my-devices` — devices assigned to the logged-in employee.
+- `POST /api/assets` — register a new asset.
+- `PATCH /api/assets/{id}` — update status, warranty, or assignment.
 
 ### IT Onboarding Workflows
-- `GET /api/onboarding` — List active employee onboarding workflows with progress bars.
-- `POST /api/onboarding` — Submit new hire onboarding request (auto-generates 8 standardized tasks).
-- `GET /api/onboarding/{id}` — Retrieve onboarding details and task breakdown.
-- `PATCH /api/onboarding/tasks/{task_id}` — Toggle task status (recalculates 0–100% progress).
+- `GET /api/onboarding` — active onboarding workflows and their progress.
+- `POST /api/onboarding` — start a new hire's onboarding (auto-generates the 8 tasks).
+- `GET /api/onboarding/{id}` — details and task breakdown for one onboarding.
+- `PATCH /api/onboarding/tasks/{task_id}` — toggle a task, progress recalculates.
 
 ### Identity & Access Requests
-- `GET /api/access-requests` — List access and permission requests.
-- `POST /api/access-requests` — Submit request for password reset, MFA re-enrollment, or shared drive.
-- `PATCH /api/access-requests/{id}/status` — Approve, fulfill, or reject access request.
+- `GET /api/access-requests` — list access/permission requests.
+- `POST /api/access-requests` — submit one (password reset, MFA, shared drive, etc.).
+- `PATCH /api/access-requests/{id}/status` — approve, fulfill, or reject.
 
 ### Knowledge Base & OS Support Guides
-- `GET /api/knowledge` — Search support documentation with OS platform and category filtering.
-- `GET /api/knowledge/{id}` — View article instructions (increments view count).
-- `POST /api/knowledge` — Publish new support guide (Support/Admin).
-- `POST /api/knowledge/{id}/vote` — Record helpful / not helpful feedback.
+- `GET /api/knowledge` — search docs, filter by OS or category.
+- `GET /api/knowledge/{id}` — view an article (bumps the view count).
+- `POST /api/knowledge` — publish a new guide (Support/Admin only).
+- `POST /api/knowledge/{id}/vote` — mark helpful or not helpful.
 
 ### Operational Analytics
-- `GET /api/dashboard/summary` — Comprehensive real-time metrics: MTTR, SLA breaches, status distribution, and 14-day volume velocity.
+- `GET /api/dashboard/summary` — the real-time numbers: MTTR, SLA breaches, status breakdown, 14-day volume.
 
 ### Health Check
-- `GET /health` — Liveness check returning `{"status": "ok", "version": "1.0.0"}`.
+- `GET /health` — liveness check, returns `{"status": "ok", "version": "1.0.0"}`.
 
 ---
 
@@ -347,7 +356,7 @@ python seed.py
 # Launch FastAPI development server
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-API Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)  
+API Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
 ### 2. Frontend Setup
@@ -367,28 +376,28 @@ Frontend Web Portal: [http://localhost:5173](http://localhost:5173)
 
 ## Automated Testing
 
-Run the automated backend test suite with `pytest`:
+Run the backend test suite with `pytest`:
 ```bash
 cd backend
 python -m pytest -v
 ```
-**Test Results**: 11 passed in ~4.5 seconds covering:
-- JWT Authentication & Unauthorized Handling
+**Test Results**: 11 passed in ~4.5 seconds, covering:
+- JWT auth and what happens when it's missing
 - Sequential `INC-YYYY-XXXXXX` ticket number generation
-- Impact × Urgency Priority Matrix calculation
-- Lifecycle status transitions & invalid transition guards
-- Mandatory resolution notes validation
-- Interactive troubleshooting checklist state persistence
-- IT Onboarding task auto-generation and 0–100% progress engine
-- Access request approval workflows
-- Knowledge base search & helpfulness voting
-- Operational dashboard summary KPIs
+- The Impact × Urgency priority calculation
+- Lifecycle transitions, including the ones that should be blocked
+- The mandatory-resolution-notes rule
+- Checklist state actually persisting
+- Onboarding task auto-generation and the 0–100% progress math
+- Access request approval flow
+- Knowledge base search and helpfulness voting
+- The dashboard summary numbers
 
 ---
 
 ## Docker & Container Deployment
 
-Run the complete stack (PostgreSQL 16 + FastAPI Backend + React Nginx Frontend) with one command:
+Run the whole stack (PostgreSQL 16 + FastAPI + React/Nginx) with one command:
 ```bash
 docker compose up --build
 ```
@@ -401,19 +410,19 @@ docker compose up --build
 ## Cloud Deployment Strategy
 
 ### Frontend Deployment (Vercel)
-1. Push codebase to GitHub repository.
-2. In Vercel, import the repository and select `frontend/` as Root Directory.
+1. Push the codebase to GitHub.
+2. In Vercel, import the repo and set `frontend/` as the Root Directory.
 3. Framework Preset: **Vite**.
-4. Configure Environment Variable:
-   - `VITE_API_URL`: URL of deployed FastAPI backend (e.g., `https://api.yourhelpdesk.com`).
+4. Set the environment variable:
+   - `VITE_API_URL`: URL of the deployed FastAPI backend (e.g., `https://api.yourhelpdesk.com`).
 5. Deploy.
 
 ### Backend Deployment (Render / Railway / Fly.io)
-1. Create a Managed PostgreSQL instance on Neon, Supabase, or Render.
+1. Spin up a managed PostgreSQL instance on Neon, Supabase, or Render.
 2. Deploy the `backend/` directory using the provided `Dockerfile`.
-3. Set Environment Variables:
+3. Set these environment variables:
    - `DATABASE_URL`: `postgresql://user:password@host:5432/helpdesk`
-   - `JWT_SECRET`: Secure production secret key
+   - `JWT_SECRET`: a real production secret, not the dev one
    - `CORS_ORIGINS`: `https://your-helpdesk.vercel.app`
 4. Health check endpoint: `/health`.
 
@@ -422,11 +431,11 @@ docker compose up --build
 ## Portfolio Summary & Resume Bullet Points
 
 ### Portfolio Summary
-> "Architected and built an end-to-end enterprise IT Helpdesk & End-User Support Management System demonstrating practical ITSM and ITIL-inspired capabilities. Engineered a FastAPI and PostgreSQL backend with role-based access control, an Impact × Urgency priority matrix, automated SLA countdowns, and an interactive diagnostic troubleshooting engine for Hardware, OS, Microsoft 365, and Google Workspace issues. Designed a React 19 and Tailwind CSS portal featuring 0–100% IT onboarding task tracking, self-service access requests, and native Recharts operational dashboards."
+> Built an end-to-end IT Helpdesk & End-User Support Management System that models real ITSM and ITIL-style workflows. The backend runs on FastAPI and PostgreSQL, with role-based access control, an Impact × Urgency priority matrix, an automated SLA countdown, and an interactive diagnostic engine covering Hardware, OS, Microsoft 365, and Google Workspace issues. The frontend is React 19 and Tailwind, with 0–100% onboarding tracking, self-service access requests, and live Recharts dashboards.
 
 ### Resume Bullet Points
-- **Full-Stack ITSM Application**: Built an ITIL-inspired Helpdesk system using FastAPI, PostgreSQL, and React 19, managing the complete incident lifecycle from intake to resolution and closure.
-- **Dynamic SLA & Priority Matrix**: Implemented an automated SLA calculation engine and business Impact × Urgency matrix, reducing resolution delays by enforcing 4h–72h targets with real-time breach detection.
-- **Interactive Hardware & OS Diagnostics**: Developed technician diagnostic checklist templates for Dell/Apple hardware, Windows 11, macOS, and M365 environments with persistent state tracking.
-- **IT Onboarding Orchestration**: Designed an employee onboarding provisioning pipeline that auto-generates 8 standardized technical setup tasks with real-time completion tracking.
-- **Operational Analytics & Dashboards**: Created executive KPI dashboards and Recharts visualizations tracking MTTR, incident volume velocity, CSAT satisfaction, and staff utilization.
+- **Full-Stack ITSM Application**: Built an ITIL-inspired helpdesk on FastAPI, PostgreSQL, and React 19, covering the full incident lifecycle from intake through resolution and closure.
+- **Dynamic SLA & Priority Matrix**: Built an automated SLA engine and Impact × Urgency matrix that enforces 4h–72h resolution targets and flags breaches in real time.
+- **Interactive Hardware & OS Diagnostics**: Built diagnostic checklist templates for Dell/Apple hardware, Windows 11, macOS, and M365, with checklist state saved as you go.
+- **IT Onboarding Orchestration**: Built an onboarding pipeline that auto-generates 8 standard setup tasks per new hire and tracks completion live.
+- **Operational Analytics & Dashboards**: Built KPI dashboards with Recharts tracking MTTR, ticket volume, CSAT, and staff workload.
