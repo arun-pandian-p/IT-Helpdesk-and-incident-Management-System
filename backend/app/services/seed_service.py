@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import random
 from datetime import datetime, date, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
