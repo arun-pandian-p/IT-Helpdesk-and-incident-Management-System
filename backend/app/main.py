@@ -30,10 +30,30 @@ logger = logging.getLogger("helpdesk_app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initializes database tables on startup if not already created."""
+    """Initializes database tables and seeds demo dataset if empty."""
     logger.info("Initializing IT Helpdesk application database models...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database initialized successfully.")
+    
+    # Check if database needs initial seeding
+    from app.db.database import SessionLocal
+    from app.db.models import User
+    from app.services.seed_service import seed_database
+
+    db = SessionLocal()
+    try:
+        user_count = db.query(User).count()
+        if user_count == 0:
+            logger.info("Database is empty. Automatically populating enterprise demo data...")
+            seed_database(db)
+            logger.info("Demo database seeded successfully.")
+        else:
+            logger.info(f"Database already populated ({user_count} users).")
+    except Exception as e:
+        logger.error(f"Error during startup database check/seed: {e}", exc_info=True)
+    finally:
+        db.close()
+
     yield
     logger.info("Shutting down IT Helpdesk application...")
 
