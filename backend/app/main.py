@@ -76,7 +76,25 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Health Check
+# Root & Health Check
+@app.get("/", tags=["System"])
+def root():
+    """Welcome endpoint for root health and documentation discovery."""
+    return {
+        "service": settings.PROJECT_NAME,
+        "status": "online",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "version": settings.VERSION,
+    }
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Avoid 404 logs for browser favicon requests."""
+    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+
+
 @app.get("/health", tags=["System"])
 def health_check():
     """Health check endpoint for container orchestrators and monitoring."""
