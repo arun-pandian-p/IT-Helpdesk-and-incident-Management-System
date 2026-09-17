@@ -19,5 +19,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Run uvicorn server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations/seed and start uvicorn server on dynamic PORT
+CMD ["sh", "-c", "python seed.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
