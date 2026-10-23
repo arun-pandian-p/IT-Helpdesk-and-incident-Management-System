@@ -367,17 +367,17 @@ export const DashboardPage: React.FC = () => {
     Low: '#64748b',
   };
 
-  const statusChartData = summary
-    ? Object.entries(summary.status_distribution).map(([name, value]) => ({ name, count: value }))
-    : [];
+  const statusChartData = Object.entries(summary?.status_distribution || {}).map(
+    ([name, value]) => ({ name, count: value })
+  );
 
-  const priorityChartData = summary
-    ? Object.entries(summary.priority_distribution).map(([name, value]) => ({ name, count: value }))
-    : [];
+  const priorityChartData = Object.entries(summary?.priority_distribution || {}).map(
+    ([name, value]) => ({ name, count: value })
+  );
 
-  const srCategoryChartData = srSummary
-    ? Object.entries(srSummary.by_category).map(([name, value]) => ({ name, count: value }))
-    : [];
+  const srCategoryChartData = Object.entries(srSummary?.by_category || {}).map(
+    ([name, value]) => ({ name, count: value })
+  );
 
   return (
     <div className="space-y-6">

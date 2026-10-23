@@ -28,6 +28,8 @@ dist-ssr/
 # Databases & local data
 *.sqlite3
 *.db
+*.db-wal
+*.db-shm
 helpdesk.db
 
 # IDE / Editor
@@ -40,6 +42,15 @@ helpdesk.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Maven & Java
+target/
+*.class
+*.jar
+*.war
+.classpath
+.project
+.settings/
 
 # Logs
 *.log

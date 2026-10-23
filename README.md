@@ -1,100 +1,64 @@
+# IT Helpdesk & Service Desk Incident Management System
 
-# IT Helpdesk & End-User Support Management System
-
-An internal service desk and technical support app, built ITIL-style, on **FastAPI**, **PostgreSQL**, **SQLAlchemy**, **Alembic**, **React (TypeScript + Vite)**, **Tailwind CSS**, and **Recharts**.
+A full-stack, enterprise-grade IT Service Desk and technical incident management platform built ITIL-style on **React 19 (TypeScript + Vite + Tailwind CSS)**, **Java 21 / Spring Boot 3.x**, **Spring `JdbcTemplate`**, and **SQLite**.
 
 > [!IMPORTANT]
-> **Disclaimer**: This is a portfolio project. It borrows ITIL concepts to model real incident management, hardware diagnostics, and SLA tracking, but it isn't ITIL-certified and doesn't claim to be.
-<img width="1910" height="855" alt="image" src="https://github.com/user-attachments/assets/fcec08fc-b9df-4dd8-8c97-5825dc95b29e" />
+> **Modern Architecture**: Fully migrated from Python/PostgreSQL to a high-performance **Java Spring Boot 3.x + Spring JDBC + SQLite** architecture with zero native or Python runtime dependencies. All business logic, ITIL priority calculations, SLA engines, and relational integrity are implemented cleanly in Java and explicit SQL.
+
+<img width="1910" height="855" alt="Service Desk Dashboard" src="https://github.com/user-attachments/assets/fcec08fc-b9df-4dd8-8c97-5825dc95b29e" />
 
 ---
 
 ## Table of Contents
-1. [Overview & Business Problem](#overview--business-problem)
-2. [Key Capabilities & Features](#key-capabilities--features)
+1. [Overview & Capabilities](#overview--capabilities)
+2. [Target Technology Stack](#target-technology-stack)
 3. [System Architecture](#system-architecture)
-4. [Technology Stack](#technology-stack)
-5. [Database Schema & ERD](#database-schema--erd)
-6. [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
-7. [Incident Lifecycle State Machine](#incident-lifecycle-state-machine)
-8. [ITIL-Inspired Priority Matrix & SLA Logic](#itil-inspired-priority-matrix--sla-logic)
-9. [Hardware Troubleshooting & OS Support Guides](#hardware-troubleshooting--os-support-guides)
-10. [IT Onboarding & Day 1 Provisioning Workflows](#it-onboarding--day-1-provisioning-workflows)
-11. [Access Requests & Identity Management](#access-requests--identity-management)
-12. [In-App Operational Analytics & Dashboards](#in-app-operational-analytics--dashboards)
-13. [REST API Specification](#rest-api-specification)
-14. [Local Setup & Development](#local-setup--development)
-15. [Automated Testing](#automated-testing)
-16. [Docker & Container Deployment](#docker--container-deployment)
-17. [Cloud Deployment Strategy (Vercel + Render + PostgreSQL)](#cloud-deployment-strategy)
-18. [Portfolio Summary & Resume Bullet Points](#portfolio-summary--resume-bullet-points)
+4. [Database Architecture & SQLite Engine](#database-architecture--sqlite-engine)
+5. [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+6. [Incident & Service Request State Machines](#incident--service-request-state-machines)
+7. [ITIL Priority Matrix & Java SLA Engine](#itil-priority-matrix--java-sla-engine)
+8. [Interactive Diagnostics & Checklists](#interactive-diagnostics--checklists)
+9. [IT Onboarding & Day 1 Workflows](#it-onboarding--day-1-workflows)
+10. [REST API Specification](#rest-api-specification)
+11. [Local Setup & Run Commands](#local-setup--run-commands)
+12. [Automated Testing & Quality Verification](#automated-testing--quality-verification)
+13. [Database Backup & PostgreSQL Migration Utility](#database-backup--postgresql-migration-utility)
+14. [Docker Deployment](#docker-deployment)
+15. [Portfolio Summary & Resume Bullet Points](#portfolio-summary--resume-bullet-points)
 
 ---
 
-## Overview & Business Problem
+## Overview & Capabilities
 
-Most IT teams know this pain: tickets pile up with no clear order, laptops get handed out with no record of who has what, SLA deadlines slip quietly until someone complains, and new hires sit around on day one waiting for accounts that should've been ready.
+Enterprise IT service desks face core operational challenges: chaotic intake queues, untracked laptop warranties, opaque SLA calculations, and delayed new-hire provisioning. This platform solves these bottlenecks end-to-end:
 
-This platform is my attempt to fix that, end to end.
-
-- **Employees** search a knowledge base before opening a ticket, and when they do open one, they attach the real context: device serial, OS, which app is broken, how bad it is. They can request access and watch their SLA countdown in real time.
-- **Support engineers** work a queue sorted by an Impact × Urgency matrix, run through diagnostic checklists instead of guessing, track first-response and resolution SLAs, escalate up to Tier 2/3 when needed, and close tickets with resolution notes and a CSAT rating attached.
-- **IT managers and admins** watch the numbers that actually matter: MTTR, first-response speed, SLA compliance, CSAT. They also own hardware inventory (warranties, who has what), track new-hire onboarding progress from 0 to 100%, and can pull up an audit trail that can't be edited after the fact.
+- **Employees / End-Users**: Search self-service knowledge base guides before submitting a ticket. Intake captures hardware serials, OS distributions, affected business applications, impact, and urgency. Real-time SLA counters monitor resolution countdowns.
+- **Support Engineers (Tier 1 / 2 / 3)**: Triage queues sorted by ITIL priority matrix, step through interactive hardware/software diagnostic checklists, document first responses, execute Tier 2/3 escalations, and enforce resolution notes before closure.
+- **IT Administrators**: Oversee hardware assets and assignment lifecycles, track new-hire onboarding progress (0–100%), monitor live Recharts operational metrics (MTTR, SLA breaches, CSAT), and inspect immutable security audit logs.
+- **Service Request Catalog**: Strict separation between unexpected disruptions (*Incidents*) and standard service orders (*Service Requests*), including approval workflows with Separation of Duties.
 
 ---
 
-## Key Capabilities & Features
+## Target Technology Stack
 
-1. **Incident & Ticket Lifecycle Management**
-   - Tickets get a readable ID: `INC-YYYY-XXXXXX`, not a random UUID nobody can reference on a call.
-   - Status moves through a real state machine: `Open` → `In Progress` → `Waiting for User` → `Waiting for Vendor` → `Escalated` → `Resolved` → `Closed`.
-   - If a "resolved" issue comes back, the ticket reopens straight into `In Progress`.
-   - You can't resolve a ticket without writing down what actually fixed it.
+### Frontend
+- **Framework**: React 19, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **Routing & Networking**: React Router v7, Axios with JWT interceptors
+- **Icons & Data Visualization**: Lucide React, Recharts
 
-2. **Dedicated Service Request Management (ITIL Catalog & Order Fulfillment)**
-   - Strict architectural and operational separation from Incidents:
-     - **Incident (`INC-YYYY-XXXXXX`)**: Unplanned interruption or reduction in quality ("Something is broken").
-     - **Service Request (`SR-YYYY-XXXXXX`)**: Standard workplace service, new equipment, license, or access order ("User requesting routine assistance or item").
-   - Formal multi-stage lifecycle: `Submitted` → `Pending Approval` → `Approved`/`Rejected` → `Assigned` → `In Progress` → `Fulfilled` → `Closed` (or `In Progress` on reported issue) / `Cancelled`.
-   - **Separation of Duties**: Requesters are strictly prohibited from approving their own service requests.
-   - **Technical Fulfillment**: Recording mandatory completion metadata (Asset Tag, Serial Number, License Key, System Role) and technical resolution notes.
-   - **Customer Verification**: Requester confirms fulfillment or reports problems directly back to engineering.
-   - Dedicated `/service-desk` portal landing page, `/service-desk/all` unified operational queue, and `/service-requests` catalog queue.
+### Backend
+- **Language & Framework**: Java 17+ (built and tested with Java 21 LTS), Spring Boot 3.3.5
+- **Web Layer**: Spring Web MVC, Jackson JSON annotations
+- **Persistence Layer**: Spring `JdbcTemplate` with explicit, parameterized SQL queries (no JPA/Hibernate primary layer)
+- **Database Engine**: SQLite 3 with official `sqlite-jdbc` driver (version `3.47.0.0`)
+- **Connection Pooling**: HikariCP with SQLite WAL mode and busy timeout configuration
+- **Security**: Spring Security 6 with stateless JWT Bearer token authentication and BCrypt password hashing
+- **Validation**: Jakarta Bean Validation (`@NotBlank`, `@Min`, `@Max`, `@Valid`)
+- **Build & Dependency Management**: Apache Maven 3.9+
+- **Testing**: JUnit 5, Spring Boot Test, MockMvc, AssertJ
 
-3. **Impact & Urgency Priority Matrix**
-   - Priority (`Critical`, `High`, `Medium`, `Low`) gets calculated from business impact (`Individual` up to `Company-wide`) crossed with urgency.
-   - Support engineers can override that suggestion, but only with a reason on record.
-
-4. **Automated SLA Engine**
-   - Target windows: Critical 4h, High 24h, Medium 48h, Low 72h (Service requests customized per catalog type: e.g. 4h–72h).
-   - Live status: `Within SLA`, `At Risk` (25% of the window left or less), or `Breached`.
-   - Every timestamp that matters gets captured automatically: `created_at`, `first_response_at`, `due_at`, `resolved_at`, `fulfilled_at`, `closed_at`.
-
-5. **Interactive Hardware Diagnostics & Troubleshooting Checklists**
-   - Covers laptops, desktops, monitors, printers, docking stations, mobile phones.
-   - Checklists change based on the problem: power and cable checks for hardware, DISM/sfc for Windows 11, Jamf profiles for macOS, Outlook/Teams/Entra ID for Microsoft 365, and a separate path for Google Workspace.
-   - Checkbox progress saves straight to the ticket, so nobody repeats a step the next engineer already tried.
-
-6. **IT Onboarding & Equipment Provisioning**
-   - Enter the new hire once (name, department, title, manager, start date, hardware needed).
-   - Automatically provisions onboarding service requests and 8 standard setup tasks: identity creation, laptop imaging, Intune/Jamf enrollment, software installs, MFA/VPN setup, orientation.
-   - A progress bar updates live as each task closes out.
-
-7. **Access & Account Requests**
-   - Covers password resets, MFA re-registration, shared drive access, and cloud app access requests.
-   - Each request moves through `Requested` → `Approved` → `Completed` or `Rejected`.
-
-8. **Knowledge Base & OS Support Guides**
-   - Self-service articles filtered by platform: Windows 11/10, macOS Sonoma, iOS, Android Enterprise.
-   - Users vote articles helpful or not, so the weak ones surface for a rewrite.
-
-9. **In-App Operational Analytics & Dashboards**
-   - Recharts-driven views: 14-day volume (opened vs. resolved), lifecycle distribution, priority breakdown, SLA compliance, and service request catalog distribution.
-
-10. **Security, RBAC & Audit Trail**
-    - Passwords hashed with Bcrypt, sessions handled with signed JWTs.
-    - Every role's permissions are enforced on the backend, not just hidden in the UI.
-    - Every creation, status change, and reassignment gets logged, and that log can't be altered after the fact.
+*No Python, FastAPI, C, C++, ctypes, JNI, or native shared-library dependencies exist in the runtime.*
 
 ---
 
@@ -105,102 +69,92 @@ This platform is my attempt to fix that, end to end.
                                   |            Employee / Staff              |
                                   +------------------------------------------+
                                                        |
-                                            React 19 + TypeScript
-                                              (Vite + Tailwind)
+                                             React 19 + TypeScript
+                                               (Vite + Tailwind)
                                                        |
-                                              REST API Requests
-                                          (Axios + JWT Bearer Token)
+                                               REST API Requests
+                                           (Axios + JWT Bearer Token)
                                                        v
                                   +------------------------------------------+
-                                  |             FastAPI Backend              |
+                                  |         Spring Boot 3.x Backend          |
                                   |------------------------------------------|
-                                  | - Router Layer (Auth, Tickets, Assets)   |
-                                  | - Auth & RBAC Dependencies               |
-                                  | - Service Layer (SLA, Priority Matrix)   |
-                                  | - Audit Logging Engine                   |
+                                  | - Controller: REST Endpoints             |
+                                  | - Security: JwtAuthenticationFilter/RBAC |
+                                  | - Service: SLA Engine, Priority Matrix   |
+                                  | - Repository: Spring JdbcTemplate        |
+                                  | - Exception: GlobalExceptionHandler      |
                                   +------------------------------------------+
                                                        |
-                                                 SQLAlchemy 2.0
-                                                (ORM & Sessions)
-                                                       |
-                                           Alembic Database Schema
+                                            Explicit Parameterized SQL
+                                           (HikariCP + SQLite JDBC)
                                                        v
                                   +------------------------------------------+
-                                  |         PostgreSQL Database Engine       |
+                                  |         SQLite Embedded Database         |
                                   |------------------------------------------|
-                                  | users, tickets, ticket_comments,         |
-                                  | ticket_status_history, assets,           |
-                                  | onboarding_requests, onboarding_tasks,   |
-                                  | access_requests, knowledge_articles,     |
-                                  | audit_logs                               |
+                                  | - PRAGMA foreign_keys = ON;              |
+                                  | - PRAGMA journal_mode = WAL;             |
+                                  | - PRAGMA busy_timeout = 5000;            |
+                                  | - 20 Relational Tables & B-Tree Indexes  |
                                   +------------------------------------------+
 ```
 
 ---
 
-## Technology Stack
+## Database Architecture & SQLite Engine
 
-- **Backend**
-  - Python 3.12+
-  - FastAPI (REST framework)
-  - Pydantic v2 & Pydantic-Settings
-  - SQLAlchemy 2.0 (ORM)
-  - Alembic (database migrations)
-  - PostgreSQL / SQLite (dual-mode dialect support)
-  - PyJWT & Bcrypt (auth and password security)
-  - Pytest & HTTPX (automated test suite)
-- **Frontend**
-  - React 19
-  - TypeScript 5
-  - Vite 6
-  - Tailwind CSS
-  - React Router v6
-  - Axios (with JWT interceptors)
-  - Recharts (interactive SVG charts)
-  - Lucide React (icon set)
-- **DevOps & Infrastructure**
-  - Docker & Docker Compose
-  - Multi-stage Nginx container build
-  - Git version control
+The relational persistence layer uses SQLite with explicit foreign key enforcement and transactional safety.
 
----
+### 1. SQLite Pragmas & Concurrency
+- `PRAGMA foreign_keys = ON;`: Cascades deletions and protects referential integrity across 20 tables.
+- `PRAGMA journal_mode = WAL;`: Write-Ahead Logging allows concurrent readers alongside a writer, maximizing throughput.
+- `PRAGMA busy_timeout = 5000;`: Single-writer transactions wait up to 5,000ms before timing out, preventing lock contention errors.
 
-## Database Schema & ERD
+### 2. Configuration & Path Portability
+The database file location is completely environment-controlled:
+```properties
+spring.datasource.url=jdbc:sqlite:${DB_PATH:helpdesk.db}
+```
+In Docker or production environments, mount a persistent volume and set `DB_PATH=/data/helpdesk.db`.
 
-### Tables
-1. `users` — accounts, credentials, role (`EMPLOYEE`, `SUPPORT`, `ADMIN`), department, job title, phone, location.
-2. `ticket_categories` — Hardware, Software, Network, Email, Access/Login, Microsoft 365, Google Workspace, Mobile Device, Security, Printer, VPN, Other.
-3. `assets` — hardware inventory: `asset_tag`, `device_type`, `manufacturer`, `model`, `serial_number`, `status`, `assigned_user_id`, `warranty_expiry`.
-4. `asset_assignments` — history of who had which device and when.
-5. `tickets` — the core incident record: `ticket_number` (`INC-YYYY-XXXXXX`), `impact`, `urgency`, `priority`, `status`, `asset_id`, `device_type`, `os_name`, `application_name`, `due_at`, `first_response_at`, `resolved_at`, `closed_at`, `resolution_notes`, `checklist_state`.
-6. `ticket_comments` — public and internal troubleshooting notes.
-7. `ticket_status_history` — every lifecycle transition, logged.
-8. `ticket_assignments` — who was assigned when.
-9. `ticket_escalations` — Tier 2/3 escalations, with the reason recorded.
-10. `ticket_feedback` — CSAT ratings (1–5 stars) plus comments.
-11. `knowledge_articles` — docs, tagged by `os_target`, with helpfulness votes.
-12. `onboarding_requests` — new hire intake: department, hardware needs, `progress_percent`.
-13. `onboarding_tasks` — the 8 provisioning tasks per request.
-14. `access_requests` — identity requests and their approval status.
-15. `improvement_requests` — ideas for improving the service, tracked like anything else.
-16. `audit_logs` — who did what, when, immutably.
+### 3. Core Database Tables
+1. `users` — User credentials, role (`EMPLOYEE`, `SUPPORT`, `ADMIN`), department, manager reference.
+2. `ticket_categories` — Active incident categories (Hardware, Software, Network, Email, Access, etc.).
+3. `assets` — Hardware inventory, asset tags, serials, assigned user, warranty expiry dates.
+4. `asset_assignments` — Historical tracking of hardware custody.
+5. `tickets` — Core incident records with ITIL priority, due date, lifecycle status, resolution notes.
+6. `ticket_comments` — Customer-visible and internal engineering notes.
+7. `ticket_status_history` — Comprehensive audit log of every state transition.
+8. `ticket_assignments` — Assignment and transfer history.
+9. `ticket_escalations` — Tier 2 and Tier 3 technical escalations.
+10. `ticket_feedback` — Customer CSAT ratings (1–5 stars) and feedback notes.
+11. `knowledge_articles` — Technical guides categorized by OS platform with helpfulness counters.
+12. `onboarding_requests` — New-hire intake workflows with calculated completion percentages.
+13. `onboarding_tasks` — 8 standardized provisioning tasks per onboarding workflow.
+14. `access_requests` — Identity, VPN, and system access requests.
+15. `improvement_requests` — Service desk feedback and platform suggestions.
+16. `service_request_types` — Catalog items with default priorities and SLA definitions.
+17. `service_requests` — Dedicated service request orders with approval workflows.
+18. `service_request_comments` — Service request conversation threads.
+19. `service_request_timeline` — Event stream for service request lifecycle milestones.
+20. `audit_logs` — Immutable audit trail of administrative and operational actions.
 
 ---
 
 ## Role-Based Access Control (RBAC)
 
-| Feature / Action | Employee | Support Engineer | IT Administrator |
+Spring Security inspects the authenticated `UserPrincipal` on every request. Roles are enforced via Spring Security annotations (`@PreAuthorize`) and configuration:
+
+| Action / Capability | Employee | Support Specialist | IT Administrator |
 | :--- | :---: | :---: | :---: |
-| Authenticate & View Profile | ✅ | ✅ | ✅ |
-| Submit Incident Ticket (with Device & Matrix) | ✅ | ✅ | ✅ |
-| View Own Tickets | ✅ | ✅ | ✅ |
+| Authenticate & View Profile (`/api/auth/me`) | ✅ | ✅ | ✅ |
+| Submit Incident Ticket (`/api/tickets`) | ✅ | ✅ | ✅ |
+| View Own Tickets & Submit CSAT Feedback | ✅ | ✅ | ✅ |
 | Post Customer-Visible Ticket Comments | ✅ | ✅ | ✅ |
 | Reopen Resolved Ticket (Issue Persists) | ✅ | ❌ | ✅ |
-| Submit CSAT Rating (1–5 Stars) | ✅ | ❌ | ❌ |
-| View All Incident Queues & Filters | ❌ | ✅ | ✅ |
+| Access Global Queues & Support Filters | ❌ | ✅ | ✅ |
 | Assign / Reassign Support Engineers | ❌ | ✅ | ✅ |
-| Transition Lifecycle Status | ❌ | ✅ | ✅ |
-| Override Suggested Priority Matrix | ❌ | ✅ | ✅ |
+| Transition Incident Lifecycle Status | ❌ | ✅ | ✅ |
+| Override Priority Matrix (Reason Required) | ❌ | ✅ | ✅ |
 | Execute Diagnostic Troubleshooting Checklists | ❌ | ✅ | ✅ |
 | Escalate to Tier 2 / Tier 3 | ❌ | ✅ | ✅ |
 | Resolve Ticket (Enforces Resolution Notes) | ❌ | ✅ | ✅ |
@@ -208,55 +162,49 @@ This platform is my attempt to fix that, end to end.
 | View Operational Dashboard & Analytics | ❌ | ✅ | ✅ |
 | Manage Hardware Asset Inventory | ❌ | ✅ | ✅ |
 | Update Onboarding Task Progress | ❌ | ✅ | ✅ |
-| Approve / Fulfill Access Requests | ❌ | ✅ | ✅ |
+| Approve / Fulfill Service Requests | ❌ | ✅ | ✅ |
 | Publish Knowledge Base Guides | ❌ | ✅ | ✅ |
-| Provision User Accounts & Switch Roles | ❌ | ❌ | ✅ |
-| Inspect Immutable Security Audit Trail | ❌ | ❌ | ✅ |
+| User Administration & Role Modification | ❌ | ❌ | ✅ |
+| Inspect Immutable Security Audit Logs | ❌ | ❌ | ✅ |
 
 ---
 
-## Incident Lifecycle State Machine
+## Incident & Service Request State Machines
 
+### Incident Lifecycle
 ```
-              +--------------+
-              |     Open     |
-              +--------------+
-                     |
-       (Assign to Support Engineer)
-                     v
-              +--------------+
-              | In Progress  |<-----------------+
-              +--------------+                  |
-                |          |                    |
-   (Waiting on  |          | (Escalate to       |
-     Employee)  v          v  Tier 2/3)         | (Reopen: Issue
-         +-----------+  +-----------+           |  Persists)
-         |  Waiting  |  | Escalated |           |
-         | for User  |  +-----------+           |
-         +-----------+         |                |
-                |              |                |
-                +-------+------+                |
-                        |                       |
-            (Provide Resolution Notes)          |
-                        v                       |
-                 +--------------+               |
-                 |   Resolved   |---------------+
-                 +--------------+
+[Open] ---> (Assign) ---> [In Progress] <-----------------+
+                             |        |                   |
+               (Wait on User)|        | (Escalate)        | (Reopen)
+                             v        v                   |
+           [Waiting for User]      [Escalated]            |
+                     \                /                   |
+              (Resolution Notes Required)                 |
+                       \            /                     |
+                        v          v                      |
+                        [Resolved] -----------------------+
+                             |
+                      (Confirm Closure)
+                             v
+                          [Closed]
+```
+
+### Service Request Lifecycle
+```
+[Submitted] ---> [Pending Approval] ---> (Approve) ---> [Assigned] ---> [In Progress] ---> [Fulfilled] ---> [Closed]
                         |
-            (Confirm Final Closure)
+                     (Reject)
                         v
-                 +--------------+
-                 |    Closed    |
-                 +--------------+
+                    [Rejected]
 ```
 
 ---
 
-## ITIL-Inspired Priority Matrix & SLA Logic
+## ITIL Priority Matrix & Java SLA Engine
+
+All calculations are executed in Java inside `com.servicedesk.service.SlaService`:
 
 ### Impact × Urgency Matrix
-Priority is set automatically the moment a ticket is submitted. Support techs can override it if the math doesn't match reality:
-
 | Business Impact \ Urgency | Critical | High | Medium | Low |
 | :--- | :---: | :---: | :---: | :---: |
 | **Company-wide** | **Critical** (4h) | **Critical** (4h) | **High** (24h) | **Medium** (48h) |
@@ -266,187 +214,216 @@ Priority is set automatically the moment a ticket is submitted. Support techs ca
 | **Individual** | **High** (24h) | **Medium** (48h) | **Medium** (48h) | **Low** (72h) |
 
 ### SLA Status Classification
-- **Within SLA**: more than 25% of the target window left, or already resolved before `due_at`.
-- **At Risk**: 4 hours or 25% of the window left, whichever comes first.
-- **Breached**: past `due_at` and still open, or was resolved after `due_at`.
+- **Within SLA**: Over 25% of the resolution window remains, or ticket resolved prior to `due_at`.
+- **At Risk**: Under 25% of window remaining, or <= 4 hours to deadline.
+- **Breached**: Current timestamp exceeds `due_at` and ticket is unresolved, or resolved after deadline.
 
 ---
 
-## Demo Accounts & Credentials
+## Interactive Diagnostics & Checklists
 
-For anyone evaluating the portfolio, these are pre-seeded:
+Support engineers utilize dynamic interactive checklists modeled for real IT support environments:
+- **Hardware**: Power rails, cable continuity, port integrity, POST codes, thermal throttling.
+- **Operating Systems**:
+  - *Windows 11/10*: SFC / DISM scans, Event Viewer triage, driver rollbacks, BitLocker status.
+  - *macOS*: Jamf profile sync, NVRAM/PRAM reset, FileVault status, Rosetta 2 emulation.
+- **Cloud & Productivity**: Microsoft 365 Entra ID sync, Outlook profile rebuilds, Google Workspace SSO.
 
-| Role | Email | Password | Assigned Name & Department |
-| :--- | :--- | :--- | :--- |
-| **Employee** | `employee@example.com` | `Password123!` | Jordan Reed (Senior Financial Analyst, Finance) |
-| **Support Engineer** | `support@example.com` | `Password123!` | Arun Pandian (Tier 2 Lead Support Specialist) |
-| **IT Administrator** | `admin@example.com` | `Password123!` | David Miller (IT Director & Service Desk Lead) |
+Checklist states persist into `tickets.checklist_state` as JSON strings via `PATCH /api/tickets/{id}/checklist`.
 
-*The login page has one-click buttons for all three, so you don't have to type these in.*
+---
+
+## IT Onboarding & Day 1 Workflows
+
+New hire onboarding workflows automatically provision 8 sequential IT tasks:
+1. Active Directory / Entra ID identity creation
+2. Corporate email & calendar mailbox provisioning
+3. Hardware laptop allocation & asset tag linking
+4. MDM enrollment (Microsoft Intune or Jamf Pro)
+5. Department software & license installation
+6. Security clearance & role-based VPN access
+7. Multi-Factor Authentication (MFA) token enrollment
+8. IT welcome session & Day-1 hardware handoff
+
+Workflow completion percentage updates dynamically: `(completed_tasks / total_tasks) * 100`.
 
 ---
 
 ## REST API Specification
 
-### Authentication
-- `POST /api/auth/register` — register a new employee account.
-- `POST /api/auth/login` — trade credentials for a signed JWT.
-- `GET /api/auth/me` — get the current user's profile.
+### Authentication & Users
+- `POST /api/auth/register` — Register a new employee account.
+- `POST /api/auth/login` — Exchange credentials for signed JWT bearer token.
+- `GET /api/auth/me` — Retrieve current authenticated user profile.
+- `POST /api/auth/seed` — Re-seed sample data on demand.
+- `GET /api/users` — List users with role and department filters.
+- `GET /api/users/support-staff` — List assignable support technicians.
 
-### Incident Management
-- `POST /api/tickets` — create a ticket (runs the priority matrix, sets the SLA due date, logs it).
-- `GET /api/tickets` — paginated list, filterable by status, priority, category, SLA state, keyword.
-- `GET /api/tickets/{id}` — full detail: timeline, checklist, CSAT feedback.
-- `POST /api/tickets/{id}/assign` — assign to a technician (auto-moves Open → In Progress).
-- `POST /api/tickets/{id}/status` — change status, with validation and an audit entry.
-- `POST /api/tickets/{id}/override-priority` — override the matrix, reason required.
-- `POST /api/tickets/{id}/escalate` — send to Tier 2/3.
-- `POST /api/tickets/{id}/resolve` — resolve (resolution notes required).
-- `POST /api/tickets/{id}/close` — close for good.
-- `POST /api/tickets/{id}/reopen` — send a resolved ticket back to In Progress.
-- `POST /api/tickets/{id}/comments` — post a customer-facing or internal note.
-- `PATCH /api/tickets/{id}/checklist` — save checklist progress.
-- `POST /api/tickets/{id}/feedback` — submit a 1–5 star CSAT rating and comment.
+### Incidents
+- `GET /api/tickets` — Paginated ticket list with status, priority, SLA, and search filtering.
+- `POST /api/tickets` — Create a new incident ticket.
+- `GET /api/tickets/{id}` — Fetch full incident detail including timeline and comments.
+- `POST /api/tickets/{id}/assign` — Assign engineer (auto-moves Open -> In Progress).
+- `POST /api/tickets/{id}/status` — Transition lifecycle state.
+- `POST /api/tickets/{id}/override-priority` — Override matrix priority with required reason.
+- `POST /api/tickets/{id}/escalate` — Escalate ticket to Tier 2/3.
+- `POST /api/tickets/{id}/resolve` — Mark incident resolved (enforces resolution notes).
+- `POST /api/tickets/{id}/close` — Mark incident closed.
+- `POST /api/tickets/{id}/reopen` — Reopen resolved incident if issue persists.
+- `POST /api/tickets/{id}/comments` — Add internal or public comment.
+- `PATCH /api/tickets/{id}/checklist` — Update diagnostic checklist state.
+- `POST /api/tickets/{id}/feedback` — Submit CSAT rating (1–5) and feedback comment.
 
-### Hardware Asset Inventory
-- `GET /api/assets` — list inventory with device type and serial.
-- `GET /api/assets/my-devices` — devices assigned to the logged-in employee.
-- `POST /api/assets` — register a new asset.
-- `PATCH /api/assets/{id}` — update status, warranty, or assignment.
+### Service Requests
+- `GET /api/service-requests/types` — List service catalog items.
+- `POST /api/service-requests` — Submit a service request order.
+- `GET /api/service-requests` — List service requests with filters.
+- `GET /api/service-requests/{id}` — Retrieve detailed service request record.
+- `POST /api/service-requests/{id}/approve` — Approve request (Separation of Duties enforced).
+- `POST /api/service-requests/{id}/reject` — Reject request with reason.
+- `POST /api/service-requests/{id}/fulfill` — Fulfill request with completion metadata.
+- `POST /api/service-requests/{id}/verify` — Requester confirms completion or flags issue.
+- `POST /api/service-requests/{id}/comments` — Post service request comment.
 
-### IT Onboarding Workflows
-- `GET /api/onboarding` — active onboarding workflows and their progress.
-- `POST /api/onboarding` — start a new hire's onboarding (auto-generates the 8 tasks).
-- `GET /api/onboarding/{id}` — details and task breakdown for one onboarding.
-- `PATCH /api/onboarding/tasks/{task_id}` — toggle a task, progress recalculates.
+### Hardware Assets
+- `GET /api/assets` — List assets with search and status filters.
+- `POST /api/assets` — Register a new device.
+- `GET /api/assets/my-devices` — Retrieve devices assigned to logged-in user.
+- `PATCH /api/assets/{id}` — Update asset status, warranty, or assignment.
 
-### Identity & Access Requests
-- `GET /api/access-requests` — list access/permission requests.
-- `POST /api/access-requests` — submit one (password reset, MFA, shared drive, etc.).
-- `PATCH /api/access-requests/{id}/status` — approve, fulfill, or reject.
-
-### Knowledge Base & OS Support Guides
-- `GET /api/knowledge` — search docs, filter by OS or category.
-- `GET /api/knowledge/{id}` — view an article (bumps the view count).
-- `POST /api/knowledge` — publish a new guide (Support/Admin only).
-- `POST /api/knowledge/{id}/vote` — mark helpful or not helpful.
-
-### Operational Analytics
-- `GET /api/dashboard/summary` — the real-time numbers: MTTR, SLA breaches, status breakdown, 14-day volume.
-
-### Health Check
-- `GET /health` — liveness check, returns `{"status": "ok", "version": "1.0.0"}`.
+### Onboarding, Access Requests, Knowledge, Dashboards
+- `GET /api/onboarding`, `POST /api/onboarding`, `PATCH /api/onboarding/tasks/{id}`
+- `GET /api/access-requests`, `POST /api/access-requests`, `PATCH /api/access-requests/{id}/status`
+- `GET /api/knowledge`, `POST /api/knowledge`, `POST /api/knowledge/{id}/vote`
+- `GET /api/dashboard/summary` — MTTR, SLA compliance rate, 14-day opened vs resolved trend.
+- `GET /health` — Liveness healthcheck (`{"status":"UP","database":"SQLite"}`).
 
 ---
 
-## Local Setup & Development
+## Local Setup & Run Commands
 
 ### Prerequisites
-- Python 3.12+
-- Node.js 20+ & npm
-- Git
+- **Java**: JDK 17 or JDK 21 installed (`java -version`)
+- **Maven**: Apache Maven 3.9+ installed (`mvn -version`)
+- **Node.js**: Node 20+ and npm installed (`node -v`)
 
-### 1. Backend Setup
+### 1. Build and Run the Java Spring Boot Backend
 ```bash
 # Navigate to backend directory
 cd backend
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
+# Run automated tests to verify JDBC persistence, SLA calculations, and RBAC
+mvn test
 
-# Install dependencies
-pip install -r requirements.txt
+# Package production executable JAR
+mvn clean package -DskipTests
 
-# Run database migrations
-alembic upgrade head
-
-# Seed database with 100+ tickets, assets, and demo accounts
-python seed.py
-
-# Launch FastAPI development server
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# Run the Spring Boot application (using default SQLite path helpdesk.db)
+mvn spring-boot:run
+# OR run the packaged JAR directly:
+java -jar target/service-desk-backend-1.0.0.jar
 ```
-API Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+The backend initializes the SQLite schema and seed accounts automatically on startup.
+- Health Check: `http://localhost:8000/health`
+- API Root: `http://localhost:8000/`
 
-### 2. Frontend Setup
+### 2. Configure Custom Database Path
+To use a custom SQLite file location:
 ```bash
-# In a separate terminal, navigate to frontend
+# On Linux/macOS
+export DB_PATH=/var/data/helpdesk.db
+java -jar target/service-desk-backend-1.0.0.jar
+
+# On Windows PowerShell
+$env:DB_PATH="C:\Data\helpdesk.db"
+java -jar target\service-desk-backend-1.0.0.jar
+```
+
+### 3. Install & Start the React Frontend
+```bash
+# In a separate terminal, navigate to frontend directory
 cd frontend
 
 # Install dependencies
 npm install
 
-# Start Vite development server
+# Run TypeScript check and production bundle verification
+npm run build
+
+# Start the Vite development server (proxies /api to http://localhost:8000)
 npm run dev
 ```
-Frontend Web Portal: [http://localhost:5173](http://localhost:5173)
+Open your browser to `http://localhost:5173`.
+
+### Demo Login Accounts
+| Role | Email | Password | Assigned Name |
+| :--- | :--- | :--- | :--- |
+| **Employee** | `employee@example.com` | `Password123!` | Jordan Reed (Senior Financial Analyst) |
+| **Support Engineer** | `support@example.com` | `Password123!` | Arun Pandian (Tier 2 Lead Support) |
+| **IT Administrator** | `admin@example.com` | `Password123!` | David Miller (IT Director & Service Desk Lead) |
+
+*The login screen contains one-click instant authentication buttons for all three roles.*
 
 ---
 
-## Automated Testing
+## Automated Testing & Quality Verification
 
-Run the backend test suite with `pytest`:
+All backend tests are written in JUnit 5 with Spring Boot Test and run against the SQLite database:
+
 ```bash
 cd backend
-python -m pytest -v
+mvn test
 ```
-**Test Results**: 11 passed in ~4.5 seconds, covering:
-- JWT auth and what happens when it's missing
-- Sequential `INC-YYYY-XXXXXX` ticket number generation
-- The Impact × Urgency priority calculation
-- Lifecycle transitions, including the ones that should be blocked
-- The mandatory-resolution-notes rule
-- Checklist state actually persisting
-- Onboarding task auto-generation and the 0–100% progress math
-- Access request approval flow
-- Knowledge base search and helpfulness voting
-- The dashboard summary numbers
+
+### Verified Test Classes & Results:
+- `SlaServiceTest`: Unit tests for ITIL Impact × Urgency matrix, SLA due date calculations, and status classification (`Within SLA`, `At Risk`, `Breached`).
+- `AuthAndSecurityTest`: Tests registration, BCrypt password validation, JWT issuance, protected endpoint enforcement, and role-based permissions.
+- `TicketFlowIntegrationTest`: Full incident lifecycle integration test (Create -> Assign -> Comment filtering -> Resolve with mandatory notes -> Close -> Reopen).
+- `ServiceRequestIntegrationTest`: Service request submission, approval with Separation of Duties, fulfillment, and customer verification.
+- `JdbcTransactionRollbackTest`: Verifies that Spring transactional rollback restores database state upon unhandled runtime exceptions.
+
+**Maven Test Suite Summary**: `14 tests run, 0 failures, 0 errors, 0 skipped. BUILD SUCCESS.`
 
 ---
 
-## Docker & Container Deployment
+## Database Backup & PostgreSQL Migration Utility
 
-Run the whole stack (PostgreSQL 16 + FastAPI + React/Nginx) with one command:
+### Backing Up SQLite Database
+Because SQLite uses Write-Ahead Logging (`WAL`), create consistent hot backups using standard file copy or SQLite's online backup API:
+```bash
+# PowerShell backup
+Copy-Item backend\helpdesk.db "backend\helpdesk_backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').db"
+
+# Bash backup
+cp backend/helpdesk.db backend/helpdesk_backup_$(date +%Y%m%d_%H%M%S).db
+```
+
+### Optional PostgreSQL-to-SQLite Migration Utility
+If migrating data from an existing PostgreSQL installation into SQLite, use the built-in `DataMigrationService.migrateFromPostgres(pgUrl, pgUser, pgPassword)`. It reads rows from all 20 tables in PostgreSQL and inserts them with parameterized statements into SQLite inside an atomic transaction.
+
+---
+
+## Docker Deployment
+
+Deploy the entire stack with a single command using multi-stage container builds:
+
 ```bash
 docker compose up --build
 ```
-- Frontend: `http://localhost:80`
-- Backend API: `http://localhost:8000`
-- PostgreSQL: `localhost:5432`
-
----
-
-## Cloud Deployment Strategy
-
-### Frontend Deployment (Vercel)
-1. Push the codebase to GitHub.
-2. In Vercel, import the repo and set `frontend/` as the Root Directory.
-3. Framework Preset: **Vite**.
-4. Set the environment variable:
-   - `VITE_API_URL`: URL of the deployed FastAPI backend (e.g., `https://api.yourhelpdesk.com`).
-5. Deploy.
-
-### Backend Deployment (Render / Railway / Fly.io)
-1. Spin up a managed PostgreSQL instance on Neon, Supabase, or Render.
-2. Deploy the `backend/` directory using the provided `Dockerfile`.
-3. Set these environment variables:
-   - `DATABASE_URL`: `postgresql://user:password@host:5432/helpdesk`
-   - `JWT_SECRET`: a real production secret, not the dev one
-   - `CORS_ORIGINS`: `https://your-helpdesk.vercel.app`
-4. Health check endpoint: `/health`.
+- **Frontend Container**: Nginx serving React 19 production build at `http://localhost:80`.
+- **Backend Container**: Eclipse Temurin 21 Alpine JRE running Spring Boot at `http://localhost:8000`.
+- **Persistent Data**: SQLite database stored in named Docker volume `helpdesk_data` mounted at `/data/helpdesk.db`.
 
 ---
 
 ## Portfolio Summary & Resume Bullet Points
 
 ### Portfolio Summary
-> Built an end-to-end IT Helpdesk & End-User Support Management System that models real ITSM and ITIL-style workflows. The backend runs on FastAPI and PostgreSQL, with role-based access control, an Impact × Urgency priority matrix, an automated SLA countdown, and an interactive diagnostic engine covering Hardware, OS, Microsoft 365, and Google Workspace issues. The frontend is React 19 and Tailwind, with 0–100% onboarding tracking, self-service access requests, and live Recharts dashboards.
+> Engineered an enterprise IT Helpdesk & Service Desk Incident Management System on React 19, TypeScript, Java 21, Spring Boot 3, and SQLite. Architected with Spring `JdbcTemplate` for high-throughput explicit SQL queries, enforcing SQLite WAL concurrency, foreign key constraints, and connection pooling. Implemented an ITIL-aligned priority matrix and automated SLA engine tracking 4h–72h targets, an interactive diagnostic checklist engine, onboarding orchestration with 0–100% progress metrics, and fine-grained RBAC with stateless JWT authentication.
 
 ### Resume Bullet Points
-- **Full-Stack ITSM Application**: Built an ITIL-inspired helpdesk on FastAPI, PostgreSQL, and React 19, covering the full incident lifecycle from intake through resolution and closure.
-- **Dynamic SLA & Priority Matrix**: Built an automated SLA engine and Impact × Urgency matrix that enforces 4h–72h resolution targets and flags breaches in real time.
-- **Interactive Hardware & OS Diagnostics**: Built diagnostic checklist templates for Dell/Apple hardware, Windows 11, macOS, and M365, with checklist state saved as you go.
-- **IT Onboarding Orchestration**: Built an onboarding pipeline that auto-generates 8 standard setup tasks per new hire and tracks completion live.
-- **Operational Analytics & Dashboards**: Built KPI dashboards with Recharts tracking MTTR, ticket volume, CSAT, and staff workload.
+- **Full-Stack Enterprise ITSM Platform**: Built an ITIL-aligned service desk application using Java 21, Spring Boot 3.x, and React 19, managing end-to-end incident lifecycles, service request catalogs, and hardware inventory.
+- **High-Performance Persistence Layer**: Implemented database access using Spring `JdbcTemplate` and SQLite with WAL mode, foreign-key enforcement, and parameterized SQL queries, eliminating ORM overhead while guaranteeing transactional consistency.
+- **Automated ITIL SLA & Priority Engine**: Designed a Java business logic engine calculating real-time Impact × Urgency priorities and 4h–72h SLA deadlines with `Within`, `At Risk`, and `Breached` tracking.
+- **Hardware & OS Diagnostics**: Engineered interactive diagnostic checklists for Windows 11, macOS, and enterprise SaaS, persisting step-by-step troubleshooting progress per ticket.
+- **Containerized Cloud Architecture**: Configured multi-stage Docker builds and docker-compose deployment with persistent SQLite volumes and automated health checks.
